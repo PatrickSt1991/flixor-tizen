@@ -1,12 +1,58 @@
 import SwiftUI
 import FlixorKit
+import Foundation
+
+enum MainTVDestination: String, CaseIterable, Identifiable {
+    case home
+    case shows
+    case movies
+    case myList
+    case search
+    case newPopular
+    case settings
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .home: return "Home"
+        case .shows: return "Shows"
+        case .movies: return "Movies"
+        case .myList: return "My List"
+        case .search: return "Search"
+        case .newPopular: return "New & Popular"
+        case .settings: return "Settings"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .home: return "house.fill"
+        case .shows: return "tv.fill"
+        case .movies: return "film.fill"
+        case .myList: return "plus.circle.fill"
+        case .search: return "magnifyingglass"
+        case .newPopular: return "sparkles.tv.fill"
+        case .settings: return "gearshape.fill"
+        }
+    }
+}
 
 struct MainTVView: View {
-    enum Tab: String, CaseIterable { case home = "Home", shows = "Shows", movies = "Movies", myNetflix = "My List", search = "Search" }
-    @State private var selected: Tab = .home
+    @State private var selected: MainTVDestination = .home
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var session: SessionManager
-    @State private var showSettings = false
+    @EnvironmentObject private var profileSettings: TVProfileSettings
+    @EnvironmentObject private var watchlistController: TVWatchlistController
+    @StateObject private var homeViewModel = TVHomeViewModel()
+    @StateObject private var showsLibraryViewModel = TVLibraryViewModel()
+    @StateObject private var moviesLibraryViewModel = TVLibraryViewModel()
+    @StateObject private var myListViewModel = TVMyListViewModel()
+    @StateObject private var searchViewModel = TVSearchViewModel()
+    @StateObject private var newPopularViewModel = TVNewPopularViewModel()
+    @State private var homeFocusHandoffToken: UUID?
+    @State private var comingSoonMessage: String?
+    @State private var comingSoonDismissTask: Task<Void, Never>?
 
     var body: some View {
         ZStack {
@@ -19,32 +65,87 @@ struct MainTVView: View {
                     // Show settings by default when not signed in
                     TVSettingsView()
                 case .authenticated:
-                    // Move NavigationStack to outer level to share focus scope
-                    NavigationStack {
-                        ZStack(alignment: .top) {
-                            // Content behind nav bar
-                            Group {
-                                switch selected {
-                                case .home: TVHomeView()
-                                case .shows: TVLibraryView(preferredKind: .show)
-                                case .movies: TVLibraryView(preferredKind: .movie)
-                                case .myNetflix: PlaceholderView(title: "My List")
-                                case .search: PlaceholderView(title: "Search")
-                                }
-                            }
-
-                            // Floating transparent nav bar (now inside NavigationStack)
-                            VStack(spacing: 0) {
-                                SimpleTopBar(
-                                    selected: $selected,
-                                    onProfileTapped: { showSettings = true },
-                                    onSearchTapped: { selected = .search }
-                                )
-                                Spacer()
-                            }
+                    TabView(selection: sidebarSelectionBinding) {
+                        Tab(
+                            MainTVDestination.home.title,
+                            systemImage: MainTVDestination.home.systemImage,
+                            value: MainTVDestination.home
+                        ) {
+                            TVHomeView(
+                                viewModel: homeViewModel,
+                                focusHandoffToken: homeFocusHandoffToken
+                            )
                         }
-                        .navigationDestination(for: MediaItem.self) { item in
-                            TVDetailsView(item: item)
+
+                        Tab(
+                            MainTVDestination.shows.title,
+                            systemImage: MainTVDestination.shows.systemImage,
+                            value: MainTVDestination.shows
+                        ) {
+                            TVLibraryView(preferredKind: .show, viewModel: showsLibraryViewModel)
+                        }
+
+                        Tab(
+                            MainTVDestination.movies.title,
+                            systemImage: MainTVDestination.movies.systemImage,
+                            value: MainTVDestination.movies
+                        ) {
+                            TVLibraryView(preferredKind: .movie, viewModel: moviesLibraryViewModel)
+                        }
+
+                        Tab(
+                            MainTVDestination.myList.title,
+                            systemImage: MainTVDestination.myList.systemImage,
+                            value: MainTVDestination.myList
+                        ) {
+                            TVMyListView(viewModel: myListViewModel)
+                                .environmentObject(watchlistController)
+                        }
+                        .tabPlacement(.sidebarOnly)
+
+                        Tab(
+                            MainTVDestination.search.title,
+                            systemImage: MainTVDestination.search.systemImage,
+                            value: MainTVDestination.search,
+                            role: .search
+                        ) {
+                            TVSearchView(viewModel: searchViewModel)
+                        }
+                        .tabPlacement(.sidebarOnly)
+
+                        if shouldShowNewPopularDestination {
+                            Tab(
+                                MainTVDestination.newPopular.title,
+                                systemImage: MainTVDestination.newPopular.systemImage,
+                                value: MainTVDestination.newPopular
+                            ) {
+                                TVNewPopularView(viewModel: newPopularViewModel)
+                                    .environmentObject(watchlistController)
+                            }
+                            .tabPlacement(.sidebarOnly)
+                        }
+
+                        Tab(
+                            MainTVDestination.settings.title,
+                            systemImage: MainTVDestination.settings.systemImage,
+                            value: MainTVDestination.settings
+                        ) {
+                            TVSettingsView()
+                        }
+                        // Pin this destination in native sidebar placement for global actions.
+                        .tabPlacement(.pinned)
+                    }
+                    .tabViewStyle(.sidebarAdaptable)
+                    .overlay(alignment: .top) {
+                        if let comingSoonMessage {
+                            Text(comingSoonMessage)
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 10)
+                                .background(.ultraThinMaterial, in: Capsule())
+                                .padding(.top, 24)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
                         }
                     }
                 }
@@ -52,10 +153,6 @@ struct MainTVView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black)
-        // Settings presented from the profile button per UI spec
-        .sheet(isPresented: $showSettings) {
-            TVSettingsView()
-        }
         .task {
             // Establish initial phase after session restore
             await updatePhaseFromSession()
@@ -73,62 +170,96 @@ struct MainTVView: View {
         .onChange(of: session.isAuthenticated) { authed in
             Task { await updatePhaseFromSession() }
         }
+        .onChange(of: profileSettings.showNewPopularTab) { _ in
+            enforceDestinationAvailability()
+        }
+        .onChange(of: profileSettings.discoveryDisabled) { _ in
+            enforceDestinationAvailability()
+        }
+        .onDisappear {
+            comingSoonDismissTask?.cancel()
+            comingSoonDismissTask = nil
+        }
     }
 
     private func updatePhaseFromSession() async {
         appState.phase = session.isAuthenticated ? .authenticated : .unauthenticated
         if session.isAuthenticated {
             selected = .home
+            appState.selectedDestination = .home
+            dispatchHomeFocusHandoff()
             // Ensure a current Plex server is selected
             await ensurePlexServerSelected()
         }
+    }
+
+    private var sidebarSelectionBinding: Binding<MainTVDestination> {
+        Binding(
+            get: { selected },
+            set: { destination in
+                if destination == .newPopular, !shouldShowNewPopularDestination {
+                    showComingSoon(for: destination)
+                    selected = .home
+                    appState.selectedDestination = .home
+                    dispatchHomeFocusHandoff()
+                    return
+                }
+
+                selected = destination
+                appState.selectedDestination = destination
+
+                #if DEBUG
+                print("🧭 [Sidebar] Selected destination: \(destination.rawValue)")
+                #endif
+
+                if destination == .home {
+                    dispatchHomeFocusHandoff()
+                }
+            }
+        )
+    }
+
+    private var shouldShowNewPopularDestination: Bool {
+        profileSettings.showNewPopularTab && !profileSettings.discoveryDisabled
+    }
+
+    private func enforceDestinationAvailability() {
+        if selected == .newPopular, !shouldShowNewPopularDestination {
+            selected = .home
+            appState.selectedDestination = .home
+            dispatchHomeFocusHandoff()
+        }
+    }
+
+    private func showComingSoon(for destination: MainTVDestination) {
+        comingSoonDismissTask?.cancel()
+        withAnimation(.easeOut(duration: 0.2)) {
+            comingSoonMessage = "\(destination.title) coming soon"
+        }
+        comingSoonDismissTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.2)) {
+                comingSoonMessage = nil
+            }
+        }
+    }
+
+    private func dispatchHomeFocusHandoff() {
+        let token = UUID()
+        homeFocusHandoffToken = token
+        #if DEBUG
+        print("🎯 [Sidebar] Home focus handoff token: \(token.uuidString)")
+        #endif
     }
 
     private func ensurePlexServerSelected() async {
         do {
             let servers = try await APIClient.shared.getPlexServers()
             if let first = servers.first(where: { $0.owned == true }) ?? servers.first {
-                print("📡 [MainTVView] Setting current server: \(first.name)")
                 _ = try? await APIClient.shared.setCurrentPlexServer(serverId: first.id)
             }
         } catch {
-            print("⚠️ [MainTVView] Failed to set server: \(error)")
         }
-    }
-}
-
-struct SimpleTopBar: View {
-    @Binding var selected: MainTVView.Tab
-    var onProfileTapped: () -> Void
-    var onSearchTapped: () -> Void
-
-    var body: some View {
-        TopNavBar(selected: $selected, onProfileTapped: onProfileTapped, onSearchTapped: onSearchTapped)
-            .padding(.top, -50)
-    }
-}
-
-struct TVHomePlaceholder: View {
-    var body: some View {
-        VStack(spacing: 12) {
-            Text("FlixorTV")
-                .font(.largeTitle.bold())
-                .foregroundStyle(.white)
-            Text("Home screen placeholder — Milestone 2 will implement billboard + rows.")
-                .foregroundStyle(.white.opacity(0.75))
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.black)
-    }
-}
-
-struct PlaceholderView: View {
-    let title: String
-    var body: some View {
-        Text(title)
-            .font(.title)
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.black)
     }
 }

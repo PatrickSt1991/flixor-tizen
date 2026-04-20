@@ -1,6 +1,22 @@
 import SwiftUI
 import FlixorKit
 
+// MARK: - Progress bar (avoids GeometryReader per card)
+private struct ProgressCapsule: View {
+    let progress: CGFloat
+    var body: some View {
+        Capsule().fill(Color.white.opacity(0.25))
+            .frame(height: 6)
+            .overlay(alignment: .leading) {
+                Capsule().fill(Color.white)
+                    .frame(width: nil)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .scaleEffect(x: max(0.01, min(progress, 1.0)), anchor: .leading)
+            }
+            .clipShape(Capsule())
+    }
+}
+
 // MARK: - Image helper
 struct TVImage: View {
     enum Layout { case aspect(CGFloat), heightFixed(CGFloat) }
@@ -22,37 +38,43 @@ struct TVImage: View {
     }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: corner, style: .continuous)
         ZStack {
-            shape
-                .fill(Color.white.opacity(0.06))
-                .overlay(
-                    LinearGradient(colors: [Color.black.opacity(0.2), Color.black.opacity(0.0)], startPoint: .bottom, endPoint: .top)
-                        .clipShape(shape)
-                )
-            // Use AsyncImage when URL is provided; otherwise keep placeholder
+            Color.white.opacity(0.06)
+            LinearGradient(colors: [Color.black.opacity(0.2), Color.black.opacity(0.0)], startPoint: .bottom, endPoint: .top)
+
             if let url = url {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .empty:
-                        Color.white.opacity(0.04)
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    case .failure:
-                        Color.white.opacity(0.04)
-                    @unknown default:
-                        Color.white.opacity(0.04)
-                    }
+                CachedAsyncImage(url: url, contentMode: .fill) {
+                    Color.white.opacity(0.04)
                 }
-                .clipShape(shape)
+            } else {
+                Color.white.opacity(0.04)
             }
         }
         .modifier(LayoutModifier(layout: layout))
-        .clipShape(shape)
-        .overlay(shape.stroke(Color.white.opacity(0.12), lineWidth: 1))
-        .contentShape(shape)
+        .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+    }
+}
+
+private struct TVLogoImage: View {
+    let url: URL
+    let maxWidth: CGFloat
+    let maxHeight: CGFloat
+    let fallbackText: String
+    let fallbackFont: Font
+
+    var body: some View {
+        CachedAsyncImage(url: url, contentMode: .fit, showsErrorView: false) {
+            Text(fallbackText)
+                .font(fallbackFont)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: maxWidth, maxHeight: maxHeight, alignment: .leading)
+        .shadow(color: .black.opacity(0.7), radius: 8, x: 0, y: 2)
     }
 }
 
@@ -74,6 +96,8 @@ private struct LayoutModifier: ViewModifier {
 struct TVPosterCard: View {
     let item: MediaItem
     let isFocused: Bool
+    var respectLibraryTitles: Bool = false
+    @EnvironmentObject private var profileSettings: TVProfileSettings
 
     // For episodes, use series poster (grandparentThumb)
     private var posterURL: URL? {
@@ -83,41 +107,46 @@ struct TVPosterCard: View {
         return ImageService.shared.thumbURL(for: item, width: 360, height: 540)
     }
 
+    private var posterCornerRadius: CGFloat {
+        switch profileSettings.posterCornerRadius {
+        case "none":
+            return 0
+        case "small":
+            return 10
+        case "large":
+            return 20
+        default:
+            return UX.posterRadius
+        }
+    }
+
+    private var shouldShowFocusedTitle: Bool {
+        guard isFocused, profileSettings.showPosterTitles else { return false }
+        if respectLibraryTitles {
+            return profileSettings.showLibraryTitles
+        }
+        return true
+    }
+
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            TVImage(url: posterURL, corner: UX.posterRadius, aspect: 2/3)
+            TVImage(url: posterURL, corner: posterCornerRadius, aspect: 2/3)
 
             // For episodes: show series logo + episode title
             if item.type == "episode" {
                 LinearGradient(colors: [Color.black.opacity(0.7), .clear], startPoint: .bottom, endPoint: .top)
-                    .clipShape(RoundedRectangle(cornerRadius: UX.posterRadius, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: posterCornerRadius, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 6) {
                     // Series logo or series title
                     if let logoURL = item.logo, let url = URL(string: logoURL) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(maxWidth: 160, maxHeight: 50, alignment: .leading)
-                                    .shadow(color: .black.opacity(0.7), radius: 6, x: 0, y: 2)
-                            case .failure, .empty:
-                                // Fallback to series title
-                                if let seriesTitle = item.grandparentTitle {
-                                    Text(seriesTitle)
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .lineLimit(1)
-                                }
-                            @unknown default:
-                                if let seriesTitle = item.grandparentTitle {
-                                    Text(seriesTitle)
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .lineLimit(1)
-                                }
-                            }
-                        }
+                        TVLogoImage(
+                            url: url,
+                            maxWidth: 160,
+                            maxHeight: 50,
+                            fallbackText: item.grandparentTitle ?? item.title,
+                            fallbackFont: .system(size: 18, weight: .semibold)
+                        )
                     } else if let seriesTitle = item.grandparentTitle {
                         // No logo, show series title
                         Text(seriesTitle)
@@ -136,9 +165,9 @@ struct TVPosterCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 // For non-episodes: show title on focus only
-                if isFocused {
+                if shouldShowFocusedTitle {
                     LinearGradient(colors: [Color.black.opacity(0.6), .clear], startPoint: .bottom, endPoint: .top)
-                        .clipShape(RoundedRectangle(cornerRadius: UX.posterRadius, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: posterCornerRadius, style: .continuous))
                     Text(item.title)
                         .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(.white)
@@ -148,23 +177,18 @@ struct TVPosterCard: View {
 
             // Progress overlay for Continue Watching items
             if let viewOffset = item.viewOffset, let duration = item.duration, duration > 0 {
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(Color.white.opacity(0.25))
-                        Capsule().fill(Color.white)
-                            .frame(width: max(2, geo.size.width * CGFloat(viewOffset) / CGFloat(duration)))
-                    }
-                    .frame(height: 6)
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 10)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                VStack {
+                    Spacer()
+                    ProgressCapsule(progress: CGFloat(viewOffset) / CGFloat(duration))
+                        .padding(.horizontal, 10)
+                        .padding(.bottom, 10)
                 }
             }
         }
         .overlay(
             Group {
                 if isFocused {
-                    RoundedRectangle(cornerRadius: UX.posterRadius, style: .continuous)
+                    RoundedRectangle(cornerRadius: posterCornerRadius, style: .continuous)
                         .stroke(Color.white.opacity(0.85), lineWidth: 3)
                 }
             }
@@ -179,6 +203,7 @@ struct TVLandscapeCard: View {
     let showBadges: Bool
     var isFocused: Bool = false
     var outlined: Bool = false
+    var focusOutlineOnFocus: Bool = false
     var heightOverride: CGFloat? = nil
     var overrideURL: URL? = nil
 
@@ -200,29 +225,13 @@ struct TVLandscapeCard: View {
                 if item.type == "episode" {
                     // Series logo or series title
                     if let logoURL = item.logo, let url = URL(string: logoURL) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(maxWidth: 280, maxHeight: 80, alignment: .leading)
-                                    .shadow(color: .black.opacity(0.7), radius: 8, x: 0, y: 2)
-                            case .failure, .empty:
-                                // Fallback to series title
-                                if let seriesTitle = item.grandparentTitle {
-                                    Text(seriesTitle)
-                                        .font(.system(size: 28, weight: .semibold))
-                                        .lineLimit(1)
-                                }
-                            @unknown default:
-                                if let seriesTitle = item.grandparentTitle {
-                                    Text(seriesTitle)
-                                        .font(.system(size: 28, weight: .semibold))
-                                        .lineLimit(1)
-                                }
-                            }
-                        }
+                        TVLogoImage(
+                            url: url,
+                            maxWidth: 280,
+                            maxHeight: 80,
+                            fallbackText: item.grandparentTitle ?? item.title,
+                            fallbackFont: .system(size: 28, weight: .semibold)
+                        )
                     } else if let seriesTitle = item.grandparentTitle {
                         // No logo, show series title
                         Text(seriesTitle)
@@ -245,25 +254,13 @@ struct TVLandscapeCard: View {
                 } else {
                     // For non-episodes: display clear logo if available, otherwise fallback to text title
                     if let logoURL = item.logo, let url = URL(string: logoURL) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(maxWidth: 280, maxHeight: 80, alignment: .leading)
-                                    .shadow(color: .black.opacity(0.7), radius: 8, x: 0, y: 2)
-                            case .failure, .empty:
-                                // Fallback to text if logo fails to load
-                                Text(item.title)
-                                    .font(.system(size: 28, weight: .semibold))
-                                    .lineLimit(1)
-                            @unknown default:
-                                Text(item.title)
-                                    .font(.system(size: 28, weight: .semibold))
-                                    .lineLimit(1)
-                            }
-                        }
+                        TVLogoImage(
+                            url: url,
+                            maxWidth: 280,
+                            maxHeight: 80,
+                            fallbackText: item.title,
+                            fallbackFont: .system(size: 28, weight: .semibold)
+                        )
                     } else {
                         // No logo available, use text title
                         Text(item.title)
@@ -284,15 +281,8 @@ struct TVLandscapeCard: View {
                 }
 
                 if let viewOffset = item.viewOffset, let duration = item.duration, duration > 0 {
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(Color.white.opacity(0.25))
-                            Capsule().fill(Color.white)
-                                .frame(width: max(2, geo.size.width * CGFloat(viewOffset) / CGFloat(duration)))
-                        }
-                    }
-                    .frame(height: 6)
-                    .padding(.top, 6)
+                    ProgressCapsule(progress: CGFloat(viewOffset) / CGFloat(duration))
+                        .padding(.top, 6)
 
                     // time-left pill overlay for Continue Watching parity
                     if duration > viewOffset {
@@ -313,7 +303,7 @@ struct TVLandscapeCard: View {
         }
         .overlay(
             Group {
-                if outlined {
+                if outlined || (focusOutlineOnFocus && isFocused) {
                     RoundedRectangle(cornerRadius: UX.landscapeRadius, style: .continuous)
                         .stroke(Color.white.opacity(0.85), lineWidth: 3)
                 }
@@ -321,6 +311,7 @@ struct TVLandscapeCard: View {
         )
     }
 }
+
 
 // MARK: - Expanded Preview (morph target)
 struct TVExpandedPreviewCard: View {

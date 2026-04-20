@@ -1,19 +1,29 @@
 import SwiftUI
 import FlixorKit
+import Foundation
 
 struct TVHomeView: View {
-    @StateObject private var vm = TVHomeViewModel()
+    @ObservedObject private var vm: TVHomeViewModel
+    let focusHandoffToken: UUID?
     @Namespace private var contentFocusNS
     @EnvironmentObject private var session: SessionManager
-    @FocusState private var focusedSection: String?
+    @EnvironmentObject private var profileSettings: TVProfileSettings
 
     @State private var focusedRowId: String?
-    @State private var rowsVisitedBefore: Set<String> = []
     @State private var rowLastFocusedItem: [String: String] = [:]
     @State private var nextRowToReceiveFocus: String?
     @State private var showingDetails: MediaItem?
     @State private var currentGradientColors: UltraBlurColors?
-    @State private var isBillboardFocused: Bool = false
+    @State private var billboardIndex: Int = 0
+    @State private var heroFocusRequestToken: UUID?
+    @State private var clearNextRowFocusTask: Task<Void, Never>?
+    @State private var clearRowFocusTask: Task<Void, Never>?
+    @State private var gradientDebounceTask: Task<Void, Never>?
+
+    init(viewModel: TVHomeViewModel, focusHandoffToken: UUID? = nil) {
+        self._vm = ObservedObject(wrappedValue: viewModel)
+        self.focusHandoffToken = focusHandoffToken
+    }
 
     var body: some View {
         ZStack {
@@ -26,134 +36,119 @@ struct TVHomeView: View {
             LazyVStack(spacing: 40) {
 
                 // Billboard
-                if let first = vm.billboardItems.first {
-                    TVBillboardView(item: first, focusNS: contentFocusNS, defaultFocus: focusedSection == nil)
-                        .padding(.top, UX.billboardTopPadding)
-                        .id("billboard")
-                        .onAppear {
-                            // When billboard appears, ensure we're showing billboard colors
-                            print("🎯 [TVHome] Billboard appeared")
-                            if focusedRowId != nil {
-                                focusedRowId = nil
+                if profileSettings.showHeroSection {
+                    if !vm.billboardItems.isEmpty {
+                        TVHeroCarouselView(
+                            items: profileSettings.heroLayout == "billboard" ? Array(vm.billboardItems.prefix(1)) : vm.billboardItems,
+                            focusNS: contentFocusNS,
+                            defaultFocus: true,
+                            chrome: profileSettings.heroLayout == "billboard" ? .focusOnly : .appleMinimal,
+                            autoAdvanceEnabled: profileSettings.heroAutoRotate && profileSettings.heroLayout != "billboard",
+                            currentIndex: $billboardIndex,
+                            focusRequestToken: heroFocusRequestToken
+                        )
+                            .opacity(focusedRowId == nil ? 1 : 0)
+                            .animation(.easeOut(duration: 0.16), value: focusedRowId == nil)
+                            .allowsHitTesting(focusedRowId == nil)
+                            .padding(.top, UX.homeHeroTopPadding)
+                            // Keep overlap static so focus transitions do not relayout the entire stack.
+                            .padding(.bottom, -(UX.heroRowOverlap + 40))
+                            .id("billboard")
+                            .onAppear {
+                                // When billboard appears, ensure we're showing billboard colors
+                                if focusedRowId != nil {
+                                    focusedRowId = nil
+                                }
                             }
-                        }
-                } else if vm.isLoading {
-                    placeholderBillboard
-                        .padding(.top, UX.billboardTopPadding)
-                        .id("billboard-placeholder")
+                    } else if vm.isLoading {
+                        placeholderBillboard
+                            .padding(.top, UX.homeHeroTopPadding)
+                            .padding(.bottom, -(UX.heroRowOverlap + 40))
+                            .id("billboard-placeholder")
+                    }
                 }
 
-                // Row Order per spec
-                // 1) My List (poster)
-                if let myList = vm.additionalSections.first(where: { $0.id == "plex-watchlist" }), !myList.items.isEmpty {
-                    TVCarouselRow(
-                        title: "My List",
-                        items: myList.items,
-                        kind: .poster,
-                        focusNS: contentFocusNS,
-                        defaultFocus: focusedRowId == myList.id || nextRowToReceiveFocus == myList.id,
-                        preferredFocusItemId: rowLastFocusedItem[myList.id],
-                        sectionId: myList.id,
-                        onSelect: { showingDetails = $0 }
-                    )
-                    .padding(.top, focusedRowId == myList.id ? UX.rowSnapTopPadding : 0) // snap padding
-                    .id("row-\(myList.id)")
-                }
-
-                // 2) Continue Watching — poster rail with inline expansion
-                if !vm.continueWatching.isEmpty {
-                    TVCarouselRow(
+                // 1) Continue Watching (top-most row)
+                if profileSettings.showContinueWatching, !vm.continueWatching.isEmpty {
+                    rowView(
                         title: "Continue Watching",
                         items: vm.continueWatching,
-                        kind: .poster,
-                        focusNS: contentFocusNS,
-                        defaultFocus: focusedRowId == "continue-watching" || nextRowToReceiveFocus == "continue-watching",
-                        preferredFocusItemId: rowLastFocusedItem["continue-watching"],
-                        sectionId: "continue-watching",
-                        onSelect: { showingDetails = $0 }
+                        kind: continueWatchingRowKind,
+                        sectionId: "continue-watching"
                     )
-                    .padding(.top, focusedRowId == "continue-watching" ? UX.rowSnapTopPadding : 0) // snap padding
-                    .id("row-continue-watching")
                 }
 
-                // 3) New on Flixor (Recently Added) — poster rail with inline expansion
-                if !vm.recentlyAdded.isEmpty {
-                    TVCarouselRow(
-                        title: "New on Flixor",
-                        items: vm.recentlyAdded,
-                        kind: .poster,
-                        focusNS: contentFocusNS,
-                        defaultFocus: focusedRowId == "recently-added" || nextRowToReceiveFocus == "recently-added",
-                        preferredFocusItemId: rowLastFocusedItem["recently-added"],
-                        sectionId: "recently-added",
-                        onSelect: { showingDetails = $0 }
+                // 2) Watchlist / My List
+                if let myList = vm.additionalSections.first(where: { $0.id == "plex-watchlist" }),
+                   profileSettings.showWatchlist,
+                   !myList.items.isEmpty {
+                    rowView(
+                        title: "My List",
+                        items: myList.items,
+                        kind: effectiveRowKind,
+                        sectionId: myList.id
                     )
-                    .padding(.top, focusedRowId == "recently-added" ? UX.rowSnapTopPadding : 0) // snap padding
-                    .id("row-recently-added")
                 }
 
-                // 4) Popular on Plex (TMDB popular movies)
-                if let popular = vm.additionalSections.first(where: { $0.id == "tmdb-popular-movies" }), !popular.items.isEmpty {
-                    TVCarouselRow(
-                        title: "Popular on Plex",
-                        items: popular.items,
-                        kind: .poster,
-                        focusNS: contentFocusNS,
-                        defaultFocus: focusedRowId == popular.id || nextRowToReceiveFocus == popular.id,
-                        preferredFocusItemId: rowLastFocusedItem[popular.id],
-                        sectionId: popular.id,
-                        onSelect: { showingDetails = $0 }
-                    )
-                    .padding(.top, focusedRowId == popular.id ? UX.rowSnapTopPadding : 0) // snap padding
-                    .id("row-\(popular.id)")
-                }
-
-                // 5) Trending Now (TMDB trending TV)
-                if let trending = vm.additionalSections.first(where: { $0.id == "tmdb-trending" }), !trending.items.isEmpty {
-                    TVCarouselRow(
-                        title: "Trending Now",
-                        items: trending.items,
-                        kind: .poster,
-                        focusNS: contentFocusNS,
-                        defaultFocus: focusedRowId == trending.id || nextRowToReceiveFocus == trending.id,
-                        preferredFocusItemId: rowLastFocusedItem[trending.id],
-                        sectionId: trending.id,
-                        onSelect: { showingDetails = $0 }
-                    )
-                    .padding(.top, focusedRowId == trending.id ? UX.rowSnapTopPadding : 0) // snap padding
-                    .id("row-\(trending.id)")
-                }
-
-                // 6) On Deck — poster rail with inline expansion
-                if !vm.onDeck.isEmpty {
-                    TVCarouselRow(
-                        title: "On Deck",
-                        items: vm.onDeck,
-                        kind: .poster,
-                        focusNS: contentFocusNS,
-                        defaultFocus: focusedRowId == "on-deck" || nextRowToReceiveFocus == "on-deck",
-                        preferredFocusItemId: rowLastFocusedItem["on-deck"],
-                        sectionId: "on-deck",
-                        onSelect: { showingDetails = $0 }
-                    )
-                    .padding(.top, focusedRowId == "on-deck" ? UX.rowSnapTopPadding : 0) // snap padding
-                    .id("row-on-deck")
-                }
-
-                // Any remaining sections (Genre, Trakt, etc.) not already displayed
-                ForEach(vm.additionalSections.filter { !["plex-watchlist","tmdb-popular-movies","tmdb-trending"].contains($0.id) }) { section in
-                    TVCarouselRow(
+                // 3) Recently added per library rows
+                ForEach(vm.recentlyAddedSections) { section in
+                    rowView(
                         title: section.title,
                         items: section.items,
-                        kind: .poster,
-                        focusNS: contentFocusNS,
-                        defaultFocus: focusedRowId == section.id || nextRowToReceiveFocus == section.id,
-                        preferredFocusItemId: rowLastFocusedItem[section.id],
-                        sectionId: section.id,
-                        onSelect: { showingDetails = $0 }
+                        kind: effectiveRowKind,
+                        sectionId: section.id
                     )
-                    .padding(.top, focusedRowId == section.id ? UX.rowSnapTopPadding : 0) // snap padding
-                    .id("row-\(section.id)")
+                }
+
+                // 4) Collection rows
+                if profileSettings.showCollectionRows {
+                    ForEach(vm.collectionSections) { section in
+                        rowView(
+                            title: section.title,
+                            items: section.items,
+                            kind: effectiveRowKind,
+                            sectionId: section.id
+                        )
+                    }
+                }
+
+                // 5) Popular + trending
+                if let popular = vm.additionalSections.first(where: { $0.id == "tmdb-popular-movies" }), !popular.items.isEmpty {
+                    rowView(
+                        title: "Popular on Plex",
+                        items: popular.items,
+                        kind: effectiveRowKind,
+                        sectionId: popular.id
+                    )
+                }
+
+                if let trending = vm.additionalSections.first(where: { $0.id == "tmdb-trending" }), !trending.items.isEmpty {
+                    rowView(
+                        title: "Trending Now",
+                        items: trending.items,
+                        kind: effectiveRowKind,
+                        sectionId: trending.id
+                    )
+                }
+
+                // 6) tvOS compatibility row (optional)
+                if profileSettings.showOnDeckRow, !vm.onDeck.isEmpty {
+                    rowView(
+                        title: "On Deck",
+                        items: vm.onDeck,
+                        kind: effectiveRowKind,
+                        sectionId: "on-deck"
+                    )
+                }
+
+                // 7) Remaining rows (genres, Trakt)
+                ForEach(vm.additionalSections.filter { !["plex-watchlist", "tmdb-popular-movies", "tmdb-trending"].contains($0.id) }) { section in
+                    rowView(
+                        title: section.title,
+                        items: section.items,
+                        kind: effectiveRowKind,
+                        sectionId: section.id
+                    )
                 }
 
                 // Error message
@@ -175,13 +170,31 @@ struct TVHomeView: View {
                     loadingSkeletons
                 }
 
-                // Provide extra trailing space so the last row can snap under the tab bar
-                Color.clear.frame(height: UX.tabHeight + UX.rowSnapInset + 150)
+                // Provide extra trailing space for comfortable overscan snap at the bottom.
+                Color.clear.frame(height: UX.homeBottomOverscan + UX.rowSnapInset)
             }
             .padding(.bottom, 80)
         }
-        // no permanent inset; content can scroll under the transparent tab bar
+        .ignoresSafeArea(edges: .top)
+        // no permanent inset; content can scroll edge-to-edge under the native sidebar shell
         .onPreferenceChange(RowFocusKey.self) { newId in
+            if let newId {
+                clearRowFocusTask?.cancel()
+            } else {
+                // During horizontal focus movement, tvOS may emit brief nil focus pulses.
+                // Clear row focus only if nil persists, which indicates real exit to hero/nav.
+                clearRowFocusTask?.cancel()
+                clearRowFocusTask = Task {
+                    try? await Task.sleep(nanoseconds: 140_000_000)
+                    guard !Task.isCancelled else { return }
+                    await MainActor.run {
+                        focusedRowId = nil
+                        nextRowToReceiveFocus = nil
+                    }
+                }
+                return
+            }
+
             // Update focused row ID (nil when billboard is focused, sectionId when row is focused)
             let previousId = focusedRowId
             if previousId != newId {
@@ -189,25 +202,24 @@ struct TVHomeView: View {
                 nextRowToReceiveFocus = newId
 
                 focusedRowId = newId
-                print("🎯 [TVHome] Focus changed from \(previousId ?? "billboard") to \(newId ?? "billboard")")
-
-                // Clear nextRowToReceiveFocus after a short delay (after focus settles)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                clearNextRowFocusTask?.cancel()
+                clearNextRowFocusTask = Task {
+                    try? await Task.sleep(nanoseconds: 200_000_000)
+                    guard !Task.isCancelled else { return }
                     nextRowToReceiveFocus = nil
                 }
             }
 
             // Scroll to row if focused
-            if let rid = newId, rid != previousId {
+            if newId != previousId, newId != firstVisibleRowId {
                 withAnimation(.easeInOut(duration: 0.24)) {
-                    vProxy.scrollTo("row-\(rid)", anchor: .top)
+                    vProxy.scrollTo("row-\(newId)", anchor: .top)
                 }
             }
         }
         .onPreferenceChange(BillboardFocusKey.self) { hasFocus in
-            isBillboardFocused = hasFocus
             // Keep billboard at top when it has focus
-            if hasFocus {
+            if hasFocus, focusedRowId == nil {
                 withAnimation(.easeInOut(duration: 0.24)) {
                     vProxy.scrollTo("billboard", anchor: .top)
                 }
@@ -217,8 +229,25 @@ struct TVHomeView: View {
             // Track which item is focused in which row
             if let rowId = value.rowId, let itemId = value.itemId {
                 rowLastFocusedItem[rowId] = itemId
-                print("🎯 [TVHome] Row \(rowId) focused item: \(itemId)")
             }
+        }
+        .onChange(of: focusHandoffToken) { token in
+            guard let token else { return }
+            focusedRowId = nil
+            nextRowToReceiveFocus = nil
+            if profileSettings.showHeroSection, !vm.billboardItems.isEmpty {
+                heroFocusRequestToken = token
+                withAnimation(.easeInOut(duration: 0.22)) {
+                    vProxy.scrollTo("billboard", anchor: .top)
+                }
+            } else if let firstRowId = firstVisibleRowId {
+                withAnimation(.easeInOut(duration: 0.22)) {
+                    vProxy.scrollTo("row-\(firstRowId)", anchor: .top)
+                }
+            }
+            #if DEBUG
+            print("🎯 [Home] Received sidebar focus handoff: \(token.uuidString)")
+            #endif
         }
         }
         }
@@ -228,56 +257,150 @@ struct TVHomeView: View {
             TVDetailsView(item: item)
         }
         .task {
-            await vm.load()
-            // Wait a moment for billboard items to populate, then fetch colors
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-            if let first = vm.billboardItems.first {
-                print("🎨 [TVHome] Initial billboard load - fetching colors")
-                await vm.fetchUltraBlurColors(for: first)
-            } else {
-                print("⚠️ [TVHome] No billboard items found for color fetch")
+            await vm.loadIfNeeded()
+            vm.startDynamicSectionPolling()
+            if vm.billboardUltraBlurColors == nil, let active = currentBillboardItem {
+                await vm.fetchUltraBlurColors(for: active)
             }
         }
         .onChange(of: session.isAuthenticated) { authed in
-            if authed { Task { await vm.load() } }
+            if authed {
+                Task { await vm.load() }
+                vm.startDynamicSectionPolling()
+            } else {
+                vm.stopDynamicSectionPolling()
+            }
         }
-        .onChange(of: vm.billboardItems.first?.id) { newId in
-            if let first = vm.billboardItems.first {
-                print("🎨 [TVHome] Billboard item changed (id: \(newId ?? "nil")) - fetching colors")
-                Task { await vm.fetchUltraBlurColors(for: first) }
+        .onChange(of: profileSettings.groupRecentlyAddedEpisodes) { _ in
+            Task { await vm.load() }
+        }
+        .onChange(of: profileSettings.enabledLibraryKeys) { _ in
+            Task { await vm.load() }
+        }
+        .onChange(of: vm.billboardItems.map(\.id)) { _ in
+            if billboardIndex >= vm.billboardItems.count {
+                billboardIndex = max(0, vm.billboardItems.count - 1)
+            }
+            if let active = currentBillboardItem {
+                Task { await vm.fetchUltraBlurColors(for: active) }
+            }
+        }
+        .onChange(of: billboardIndex) { _ in
+            if let active = currentBillboardItem {
+                Task { await vm.fetchUltraBlurColors(for: active) }
             }
         }
         .onChange(of: focusedRowId) { rowId in
-            // When a row is focused, use default row colors
-            // When no row is focused (billboard visible), use billboard colors
-            if rowId != nil {
-                let rowColors = TVHomeViewModel.defaultRowColors
-                print("🎨 [TVHome] Switching to row colors (focused: \(rowId!))")
-                print("   → Setting colors: TL=\(rowColors.topLeft) TR=\(rowColors.topRight)")
-                currentGradientColors = rowColors
-            } else if let billboardColors = vm.billboardUltraBlurColors {
-                print("🎨 [TVHome] Switching to billboard colors")
-                print("   → Setting colors: TL=\(billboardColors.topLeft) TR=\(billboardColors.topRight)")
-                currentGradientColors = billboardColors
+            // Debounce gradient color changes to avoid recomputes during fast scrolling
+            gradientDebounceTask?.cancel()
+            gradientDebounceTask = Task {
+                try? await Task.sleep(nanoseconds: 200_000_000) // 200ms debounce
+                guard !Task.isCancelled else { return }
+                if rowId != nil {
+                    let rowColors = TVHomeViewModel.defaultRowColors
+                    if !colorsEqual(currentGradientColors, rowColors) {
+                        currentGradientColors = rowColors
+                    }
+                } else if let billboardColors = vm.billboardUltraBlurColors {
+                    if !colorsEqual(currentGradientColors, billboardColors) {
+                        currentGradientColors = billboardColors
+                    }
+                }
             }
-            print("   → Current gradient: \(currentGradientColors?.topLeft ?? "nil")")
         }
         .onChange(of: vm.billboardUltraBlurColors) { billboardColors in
             // Update gradient to billboard colors only if no row is focused
             if focusedRowId == nil, let colors = billboardColors {
-                print("🎨 [TVHome] Billboard colors loaded, applying (no row focused)")
-                currentGradientColors = colors
-            } else {
-                print("🎨 [TVHome] Billboard colors loaded but row is focused, skipping")
+                if !colorsEqual(currentGradientColors, colors) {
+                    currentGradientColors = colors
+                }
             }
         }
+        .onDisappear {
+            clearNextRowFocusTask?.cancel()
+            clearRowFocusTask?.cancel()
+            gradientDebounceTask?.cancel()
+            vm.stopDynamicSectionPolling()
+        }
+    }
+
+    private func colorsEqual(_ lhs: UltraBlurColors?, _ rhs: UltraBlurColors) -> Bool {
+        guard let lhs else { return false }
+        return lhs.topLeft == rhs.topLeft
+            && lhs.topRight == rhs.topRight
+            && lhs.bottomRight == rhs.bottomRight
+            && lhs.bottomLeft == rhs.bottomLeft
+    }
+
+    private var effectiveRowKind: TVRowCardKind {
+        profileSettings.rowLayout == "landscape" ? .landscape : .poster
+    }
+
+    private var continueWatchingRowKind: TVRowCardKind {
+        profileSettings.continueWatchingLayout == "landscape" ? .landscape : .poster
+    }
+
+    @ViewBuilder
+    private func rowView(
+        title: String,
+        items: [MediaItem],
+        kind: TVRowCardKind,
+        sectionId: String
+    ) -> some View {
+        if !items.isEmpty {
+            TVCarouselRow(
+                title: title,
+                items: items,
+                kind: kind,
+                focusNS: contentFocusNS,
+                defaultFocus: focusedRowId == sectionId || nextRowToReceiveFocus == sectionId,
+                preferredFocusItemId: rowLastFocusedItem[sectionId],
+                sectionId: sectionId,
+                landscapeFocusOutline: kind == .landscape,
+                onSelect: { showingDetails = $0 }
+            )
+            .id("row-\(sectionId)")
+        }
+    }
+
+    private var currentBillboardItem: MediaItem? {
+        guard !vm.billboardItems.isEmpty else { return nil }
+        let clamped = min(max(billboardIndex, 0), vm.billboardItems.count - 1)
+        return vm.billboardItems[clamped]
+    }
+
+    private var firstVisibleRowId: String? {
+        if profileSettings.showContinueWatching, !vm.continueWatching.isEmpty { return "continue-watching" }
+        if let myList = vm.additionalSections.first(where: { $0.id == "plex-watchlist" && !$0.items.isEmpty }),
+           profileSettings.showWatchlist {
+            return myList.id
+        }
+        if let firstRecent = vm.recentlyAddedSections.first(where: { !$0.items.isEmpty }) { return firstRecent.id }
+        if profileSettings.showCollectionRows,
+           let firstCollection = vm.collectionSections.first(where: { !$0.items.isEmpty }) {
+            return firstCollection.id
+        }
+        if let popular = vm.additionalSections.first(where: { $0.id == "tmdb-popular-movies" && !$0.items.isEmpty }) {
+            return popular.id
+        }
+        if let trending = vm.additionalSections.first(where: { $0.id == "tmdb-trending" && !$0.items.isEmpty }) {
+            return trending.id
+        }
+        if profileSettings.showOnDeckRow, !vm.onDeck.isEmpty { return "on-deck" }
+        if let section = vm.additionalSections
+            .filter({ !["plex-watchlist", "tmdb-popular-movies", "tmdb-trending"].contains($0.id) })
+            .first(where: { !$0.items.isEmpty }) {
+            return section.id
+        }
+        return nil
     }
 
     private var placeholderBillboard: some View {
         RoundedRectangle(cornerRadius: 26, style: .continuous)
             .fill(Color.white.opacity(0.06))
-            .frame(height: 820)
-            .padding(.horizontal, 40)
+            .frame(height: UX.heroFullBleedHeight)
+            .frame(maxWidth: .infinity)
+            .ignoresSafeArea(.container, edges: .horizontal)
     }
 }
 
@@ -286,8 +409,8 @@ extension TVHomeView {
     @ViewBuilder
     var loadingSkeletons: some View {
         VStack(spacing: 32) {
-            skeletonRow(title: "My List", poster: true)
             skeletonRow(title: "Continue Watching", poster: false)
+            skeletonRow(title: "My List", poster: true)
             skeletonRow(title: "New on Flixor", poster: true)
         }
     }

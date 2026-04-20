@@ -66,6 +66,13 @@ final class TVLibraryViewModel: ObservableObject {
         }
     }
 
+    enum ViewMode: String, CaseIterable, Identifiable {
+        case grid
+        case list
+
+        var id: String { rawValue }
+    }
+
     struct LibrarySectionSummary: Identifiable, Equatable {
         enum Kind: String {
             case movie
@@ -112,6 +119,8 @@ final class TVLibraryViewModel: ObservableObject {
         didSet { applyFilters() }
     }
 
+    @Published var viewMode: ViewMode = .grid
+
     @Published var contentTab: ContentTab = .library {
         didSet {
             guard contentTab == .collections else { return }
@@ -138,6 +147,7 @@ final class TVLibraryViewModel: ObservableObject {
     @Published var hasMore: Bool = false
     @Published var errorMessage: String?
     @Published private(set) var currentUltraBlurColors: UltraBlurColors?
+    @Published private(set) var activeCollectionTitle: String?
 
     // MARK: - Private
 
@@ -147,6 +157,8 @@ final class TVLibraryViewModel: ObservableObject {
     private var totals: [String: Int] = [:]
     private var sectionsLoaded = false
     private var collectionsCache: [String: [CollectionEntry]] = [:]
+    private var ultraBlurCache: [String: UltraBlurColors] = [:]
+    private var ultraBlurTask: Task<Void, Never>?
 
     // MARK: - Public API
 
@@ -176,24 +188,18 @@ final class TVLibraryViewModel: ObservableObject {
     }
 
     func updateGenre(_ option: FilterOption?) {
-        print("🎯 [Library] updateGenre called with: \(option?.label ?? "nil")")
         guard selectedGenre?.id != option?.id else {
-            print("⚠️ [Library] Genre unchanged, skipping update")
             return
         }
         selectedGenre = option
-        print("✅ [Library] Genre updated to: \(option?.label ?? "nil")")
         Task { await reloadCurrentSection() }
     }
 
     func updateYear(_ option: FilterOption?) {
-        print("🎯 [Library] updateYear called with: \(option?.label ?? "nil")")
         guard selectedYear?.id != option?.id else {
-            print("⚠️ [Library] Year unchanged, skipping update")
             return
         }
         selectedYear = option
-        print("✅ [Library] Year updated to: \(option?.label ?? "nil")")
         Task { await reloadCurrentSection() }
     }
 
@@ -222,7 +228,30 @@ final class TVLibraryViewModel: ObservableObject {
         sectionsLoaded = false
         selectedGenre = nil
         selectedYear = nil
+        activeCollectionTitle = nil
         await loadIfNeeded()
+    }
+
+    func openCollection(_ collection: CollectionEntry) async {
+        guard let plexServer = FlixorCore.shared.plexServer else {
+            errorMessage = "No active Plex server connected."
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let items = try await plexServer.getCollectionItems(ratingKey: collection.id, size: 200)
+            let mapped = items.map { mapPlexMedia($0) }
+            self.items = mapped
+            self.visibleItems = mapped
+            self.hasMore = false
+            self.activeCollectionTitle = collection.title
+            self.contentTab = .library
+        } catch {
+            errorMessage = "Unable to open collection: \(error.localizedDescription)"
+        }
     }
 
     // MARK: - Data Loading
@@ -253,6 +282,7 @@ final class TVLibraryViewModel: ObservableObject {
     private func reloadCurrentSection(clearFilters: Bool = false) async {
         guard let section = activeSection else { return }
         isLoading = true
+        activeCollectionTitle = nil
         items = []
         visibleItems = []
         offsets[section.id] = 0
@@ -354,17 +384,11 @@ final class TVLibraryViewModel: ObservableObject {
             URLQueryItem(name: "sort", value: sort.apiParameter)
         ]
 
-        print("🔍 [Library] Building query with filters:")
-        print("   - selectedGenre: \(selectedGenre?.label ?? "nil") (value: \(selectedGenre?.value ?? "nil"))")
-        print("   - selectedYear: \(selectedYear?.label ?? "nil") (value: \(selectedYear?.value ?? "nil"))")
-
         if let genre = selectedGenre?.value {
             queryItems.append(URLQueryItem(name: "genre", value: genre))
-            print("   ✅ Added genre filter: \(genre)")
         }
         if let year = selectedYear?.value {
             queryItems.append(URLQueryItem(name: "year", value: year))
-            print("   ✅ Added year filter: \(year)")
         }
 
         do {
@@ -426,6 +450,33 @@ final class TVLibraryViewModel: ObservableObject {
             rating: metadata.rating,
             year: metadata.year
         )
+    }
+
+    private func mapPlexMedia(_ metadata: FlixorKit.PlexMediaItem) -> LibraryEntry {
+        let baseId = metadata.ratingKey ?? metadata.key ?? UUID().uuidString
+        let prefixedId = baseId.hasPrefix("plex:") ? baseId : "plex:\(baseId)"
+        let media = MediaItem(
+            id: prefixedId,
+            title: metadata.title ?? "Unknown",
+            type: metadata.type ?? "movie",
+            thumb: metadata.thumb,
+            art: metadata.art,
+            year: metadata.year,
+            rating: metadata.rating,
+            duration: metadata.duration,
+            viewOffset: metadata.viewOffset,
+            summary: metadata.summary,
+            grandparentTitle: metadata.grandparentTitle,
+            grandparentThumb: metadata.grandparentThumb,
+            grandparentArt: metadata.grandparentArt,
+            parentIndex: metadata.parentIndex,
+            index: metadata.index,
+            parentRatingKey: metadata.parentRatingKey,
+            parentTitle: metadata.parentTitle,
+            leafCount: metadata.leafCount,
+            viewedLeafCount: metadata.viewedLeafCount
+        )
+        return LibraryEntry(id: media.id, media: media, rating: nil, year: media.year)
     }
 
     private func applyFilters() {
@@ -519,18 +570,24 @@ final class TVLibraryViewModel: ObservableObject {
     // MARK: - UltraBlur Colors
 
     func fetchUltraBlurColors(for item: MediaItem) async {
-        guard let artURL = item.art ?? item.thumb else {
-            print("⚠️ [Library] No art URL for UltraBlur colors")
+        if let cached = ultraBlurCache[item.id] {
+            currentUltraBlurColors = cached
             return
         }
 
-        do {
-            print("🎨 [Library] Fetching UltraBlur colors for: \(item.title) (url: \(artURL))")
-            let colors = try await api.getUltraBlurColors(imageUrl: artURL)
-            print("✅ [Library] UltraBlur colors fetched: TL=\(colors.topLeft) TR=\(colors.topRight)")
-            currentUltraBlurColors = colors
-        } catch {
-            print("❌ [Library] Failed to fetch UltraBlur colors: \(error)")
+        let resolvedURL = ImageService.shared.artURL(for: item, width: 1920, height: 1080)?.absoluteString
+            ?? ImageService.shared.thumbURL(for: item, width: 1920, height: 1080)?.absoluteString
+
+        guard let resolvedURL else { return }
+        ultraBlurTask?.cancel()
+        ultraBlurTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            guard !Task.isCancelled else { return }
+            if let colors = try? await api.getUltraBlurColors(imageUrl: resolvedURL) {
+                guard !Task.isCancelled else { return }
+                ultraBlurCache[item.id] = colors
+                currentUltraBlurColors = colors
+            }
         }
     }
 }

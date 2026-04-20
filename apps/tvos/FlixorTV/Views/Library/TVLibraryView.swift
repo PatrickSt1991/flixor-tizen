@@ -11,16 +11,49 @@ import FlixorKit
 struct TVLibraryView: View {
     let preferredKind: TVLibraryViewModel.LibrarySectionSummary.Kind?
 
-    @StateObject private var viewModel = TVLibraryViewModel()
+    @ObservedObject private var viewModel: TVLibraryViewModel
+    @EnvironmentObject private var profileSettings: TVProfileSettings
     @Namespace private var contentNS
     @State private var selectedItem: MediaItem?
     @FocusState private var focusedID: String?
     @State private var focusDebounceTask: Task<Void, Never>?
+    @State private var settingsRefreshTask: Task<Void, Never>?
 
-    private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: UX.itemSpacing), count: 5)
+    private var posterScale: CGFloat {
+        switch profileSettings.posterSize {
+        case "small":
+            return 0.86
+        case "large":
+            return 1.14
+        default:
+            return 1.0
+        }
+    }
 
-    init(preferredKind: TVLibraryViewModel.LibrarySectionSummary.Kind? = nil) {
+    private var libraryPosterWidth: CGFloat { UX.posterWidth * posterScale }
+    private var libraryPosterHeight: CGFloat { UX.posterHeight * posterScale }
+
+    private var gridColumnCount: Int {
+        switch profileSettings.posterSize {
+        case "small":
+            return 6
+        case "large":
+            return 4
+        default:
+            return 5
+        }
+    }
+
+    private var gridColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: UX.itemSpacing), count: gridColumnCount)
+    }
+
+    init(
+        preferredKind: TVLibraryViewModel.LibrarySectionSummary.Kind? = nil,
+        viewModel: TVLibraryViewModel
+    ) {
         self.preferredKind = preferredKind
+        self._viewModel = ObservedObject(wrappedValue: viewModel)
     }
 
     var body: some View {
@@ -51,31 +84,32 @@ struct TVLibraryView: View {
 
             // If no item is focused, do nothing
             guard let focusedID = newFocusedID else {
-                print("🎯 [Library] Focus cleared")
                 return
             }
 
             // Find the focused item
             guard let focusedEntry = viewModel.visibleItems.first(where: { $0.id == focusedID }) else {
-                print("⚠️ [Library] Focused item not found: \(focusedID)")
                 return
             }
 
-            print("🎯 [Library] Focus changed to: \(focusedEntry.media.title) - starting 2s timer")
-
-            // Start a new 2-second debounce task
+            // Start a short debounce task to avoid recoloring during fast focus movement.
             focusDebounceTask = Task {
-                do {
-                    try await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-
-                    // If we weren't cancelled, fetch the colors
-                    print("✅ [Library] 2s elapsed - fetching colors for: \(focusedEntry.media.title)")
-                    await viewModel.fetchUltraBlurColors(for: focusedEntry.media)
-                } catch {
-                    // Task was cancelled (user moved to another item)
-                    print("❌ [Library] Timer cancelled - user moved before 2s")
-                }
+                try? await Task.sleep(nanoseconds: 350_000_000)
+                guard !Task.isCancelled else { return }
+                await viewModel.fetchUltraBlurColors(for: focusedEntry.media)
             }
+        }
+        .onReceive(profileSettings.objectWillChange) { _ in
+            settingsRefreshTask?.cancel()
+            settingsRefreshTask = Task {
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                guard !Task.isCancelled else { return }
+                await viewModel.retry()
+            }
+        }
+        .onDisappear {
+            focusDebounceTask?.cancel()
+            settingsRefreshTask?.cancel()
         }
     }
 
@@ -83,8 +117,8 @@ struct TVLibraryView: View {
         UltraBlurColors(
             topLeft: "#1a1a2e",
             topRight: "#16213e",
-            bottomLeft: "#0f3460",
-            bottomRight: "#0a1929"
+            bottomRight: "#0a1929",
+            bottomLeft: "#0f3460"
         )
     }
 
@@ -93,8 +127,13 @@ struct TVLibraryView: View {
         if let error = viewModel.errorMessage {
             errorState(message: error)
         } else if viewModel.contentTab == .collections {
-            // Collections view (Phase 3)
-            emptyState(message: "Collections view coming soon")
+            TVCollectionsGridView(
+                collections: viewModel.collections,
+                isLoading: viewModel.isLoadingCollections,
+                onSelect: { collection in
+                    Task { await viewModel.openCollection(collection) }
+                }
+            )
         } else {
             libraryContent
         }
@@ -106,6 +145,8 @@ struct TVLibraryView: View {
             skeletonGrid
         } else if viewModel.visibleItems.isEmpty {
             emptyState(message: "No titles found")
+        } else if viewModel.viewMode == .list {
+            listView
         } else {
             gridView
         }
@@ -116,7 +157,7 @@ struct TVLibraryView: View {
             LazyVGrid(columns: gridColumns, spacing: UX.railV) {
                 ForEach(0..<15, id: \.self) { _ in
                     SkeletonPoster()
-                        .frame(width: UX.posterWidth, height: UX.posterHeight)
+                        .frame(width: libraryPosterWidth, height: libraryPosterHeight)
                 }
             }
             .padding(.horizontal, UX.gridH)
@@ -127,20 +168,32 @@ struct TVLibraryView: View {
 
     private var gridView: some View {
         ScrollView {
+            if let activeCollectionTitle = viewModel.activeCollectionTitle {
+                HStack {
+                    Text(activeCollectionTitle)
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundStyle(.white)
+                    Spacer()
+                }
+                .padding(.horizontal, UX.gridH)
+                .padding(.top, 16)
+            }
+
             LazyVGrid(columns: gridColumns, spacing: UX.railV) {
                 ForEach(viewModel.visibleItems) { entry in
-                    TVPosterCard(item: entry.media, isFocused: focusedID == entry.id)
-                        .frame(width: UX.posterWidth, height: UX.posterHeight)
+                    let isFocused = focusedID == entry.id
+                    TVPosterCard(item: entry.media, isFocused: isFocused, respectLibraryTitles: true)
+                        .frame(width: libraryPosterWidth, height: libraryPosterHeight)
                         .id(entry.id)
                         .focusable(true)
                         .focused($focusedID, equals: entry.id)
-                        .scaleEffect(focusedID == entry.id ? UX.focusScale : 1.0)
+                        .scaleEffect(isFocused ? UX.focusScale : 1.0)
                         .shadow(
-                            color: .black.opacity(focusedID == entry.id ? 0.4 : 0.2),
-                            radius: focusedID == entry.id ? 16 : 8,
-                            y: focusedID == entry.id ? 8 : 4
+                            color: .black.opacity(isFocused ? 0.4 : 0.2),
+                            radius: isFocused ? 16 : 8,
+                            y: isFocused ? 8 : 4
                         )
-                        .animation(.easeOut(duration: UX.focusDur), value: focusedID == entry.id)
+                        .animation(.easeOut(duration: UX.focusDur), value: focusedID)
                         .onTapGesture {
                             selectedItem = entry.media
                         }
@@ -160,6 +213,61 @@ struct TVLibraryView: View {
             }
         }
         .focusScope(contentNS)
+    }
+
+    private var listView: some View {
+        ScrollView {
+            LazyVStack(spacing: 14) {
+                ForEach(viewModel.visibleItems) { entry in
+                    Button {
+                        selectedItem = entry.media
+                    } label: {
+                        HStack(spacing: 16) {
+                            CachedAsyncImage(url: ImageService.shared.thumbURL(for: entry.media, width: 240, height: 360))
+                                .aspectRatio(2/3, contentMode: .fill)
+                                .frame(width: 130, height: 195)
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                if profileSettings.showLibraryTitles {
+                                    Text(entry.media.title)
+                                        .font(.system(size: 30, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                }
+                                Text(infoText(for: entry))
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(.white.opacity(0.75))
+                                    .lineLimit(1)
+                                if let summary = entry.media.summary, !summary.isEmpty {
+                                    Text(summary)
+                                        .font(.system(size: 18))
+                                        .foregroundStyle(.white.opacity(0.65))
+                                        .lineLimit(2)
+                                }
+                            }
+                            Spacer()
+                        }
+                        .padding(18)
+                        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .onAppear { viewModel.loadMoreIfNeeded(currentItem: entry) }
+                }
+            }
+            .padding(.horizontal, UX.gridH)
+            .padding(.vertical, 24)
+        }
+    }
+
+    private func infoText(for entry: TVLibraryViewModel.LibraryEntry) -> String {
+        var pieces: [String] = []
+        if let year = entry.year {
+            pieces.append(String(year))
+        }
+        if let rating = entry.rating {
+            pieces.append(String(format: "%.1f", rating))
+        }
+        return pieces.joined(separator: " · ")
     }
 
     private func emptyState(message: String) -> some View {
@@ -211,5 +319,78 @@ struct TVLibraryView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(80)
+    }
+}
+
+private struct TVCollectionsGridView: View {
+    let collections: [TVLibraryViewModel.CollectionEntry]
+    let isLoading: Bool
+    var onSelect: (TVLibraryViewModel.CollectionEntry) -> Void
+
+    private let columns = [GridItem(.adaptive(minimum: 420), spacing: 24)]
+
+    var body: some View {
+        if isLoading {
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 24) {
+                    ForEach(0..<6, id: \.self) { _ in
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(Color.white.opacity(0.08))
+                            .frame(height: 240)
+                    }
+                }
+                .padding(.horizontal, UX.gridH)
+                .padding(.vertical, 28)
+            }
+        } else if collections.isEmpty {
+            VStack(spacing: 12) {
+                Image(systemName: "square.stack.3d.up")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.white.opacity(0.5))
+                Text("No collections available")
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 24) {
+                    ForEach(collections) { collection in
+                        Button {
+                            onSelect(collection)
+                        } label: {
+                            ZStack(alignment: .bottomLeading) {
+                                CachedAsyncImage(url: collection.artwork)
+                                    .aspectRatio(16/9, contentMode: .fill)
+                                    .frame(height: 240)
+                                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                    .overlay(
+                                        LinearGradient(
+                                            colors: [Color.black.opacity(0.72), Color.clear],
+                                            startPoint: .bottom,
+                                            endPoint: .top
+                                        )
+                                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                    )
+
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(collection.title)
+                                        .font(.system(size: 30, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .lineLimit(2)
+                                    Text("\(collection.count) items")
+                                        .font(.system(size: 18, weight: .medium))
+                                        .foregroundStyle(.white.opacity(0.85))
+                                }
+                                .padding(18)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, UX.gridH)
+                .padding(.vertical, 28)
+            }
+        }
     }
 }

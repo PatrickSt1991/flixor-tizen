@@ -29,6 +29,30 @@ export default function BottomAppBarSettings() {
                 disabled={settings.discoveryDisabled}
               />
             )}
+            isLast={false}
+          />
+          <SettingItem
+            title="Downloads Tab"
+            description="Show Downloads tab in bottom navigation"
+            icon="download-outline"
+            renderRight={() => (
+              <Switch
+                value={settings.showDownloadsTab}
+                onValueChange={(value) => updateSetting('showDownloadsTab', value)}
+              />
+            )}
+            isLast={false}
+          />
+          <SettingItem
+            title="My List Tab"
+            description="Show My List tab in bottom navigation"
+            icon="bookmark-outline"
+            renderRight={() => (
+              <Switch
+                value={settings.showMyListTab}
+                onValueChange={(value) => updateSetting('showMyListTab', value)}
+              />
+            )}
             isLast={true}
           />
         </SettingsCard>

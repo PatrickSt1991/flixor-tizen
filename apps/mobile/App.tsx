@@ -358,22 +358,26 @@ const Tabs = React.memo(() => {
               }}
             />
           )}
-          <IOSTab.Screen
-            name="MyTab"
-            component={MyListStackNavigator}
-            options={{
-              title: 'My List',
-              tabBarIcon: () => ({ type: 'sfSymbol', name: 'bookmark' }),
-            }}
-          />
-          <IOSTab.Screen
-            name="DownloadsTab"
-            component={DownloadsStackNavigator}
-            options={{
-              title: 'Downloads',
-              tabBarIcon: () => ({ type: 'sfSymbol', name: 'arrow.down.circle' }),
-            }}
-          />
+          {settings.showMyListTab && (
+            <IOSTab.Screen
+              name="MyTab"
+              component={MyListStackNavigator}
+              options={{
+                title: 'My List',
+                tabBarIcon: () => ({ type: 'sfSymbol', name: 'bookmark' }),
+              }}
+            />
+          )}
+          {settings.showDownloadsTab && (
+            <IOSTab.Screen
+              name="DownloadsTab"
+              component={DownloadsStackNavigator}
+              options={{
+                title: 'Downloads',
+                tabBarIcon: () => ({ type: 'sfSymbol', name: 'arrow.down.circle' }),
+              }}
+            />
+          )}
           <IOSTab.Screen
             name="SettingsTab"
             component={SettingsTabScreen}
@@ -435,8 +439,12 @@ const Tabs = React.memo(() => {
       {settings.showNewHotTab && (
         <Tab.Screen name="NewHotTab" options={{ title: 'New & Hot' }} component={NewHotStackNavigator} />
       )}
-      <Tab.Screen name="MyTab" options={{ title: 'My List' }} component={MyListStackNavigator} />
-      <Tab.Screen name="DownloadsTab" options={{ title: 'Downloads' }} component={DownloadsStackNavigator} />
+      {settings.showMyListTab && (
+        <Tab.Screen name="MyTab" options={{ title: 'My List' }} component={MyListStackNavigator} />
+      )}
+      {settings.showDownloadsTab && (
+        <Tab.Screen name="DownloadsTab" options={{ title: 'Downloads' }} component={DownloadsStackNavigator} />
+      )}
       <Tab.Screen name="SettingsTab" options={{ title: 'Settings' }} component={SettingsTabScreen} />
     </Tab.Navigator>
   );
@@ -538,6 +546,16 @@ function AppContent() {
             // Fully authenticated, connected, and onboarded - show main app
             <>
               <Stack.Screen name="Main" component={Tabs} />
+              <Stack.Screen
+                name="Downloads"
+                component={Downloads}
+                options={{ presentation: 'card', animation: 'slide_from_right' }}
+              />
+              <Stack.Screen
+                name="Player"
+                component={Player}
+                options={{ presentation: 'fullScreenModal', animation: 'fade' }}
+              />
               <Stack.Screen
                 name="ProfileSelect"
                 options={{

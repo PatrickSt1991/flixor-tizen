@@ -8,16 +8,20 @@
 import Foundation
 
 /// Available player backends
-enum PlayerBackend: String, CaseIterable, Codable {
+enum PlayerBackend: String, CaseIterable, Codable, Hashable, Identifiable {
     case avkit = "AVKit (Native)"
     case mpv = "MPV (FFmpeg)"
+
+    var id: String { rawValue }
+
+    var displayName: String { rawValue }
 
     var description: String {
         switch self {
         case .avkit:
             return "Native Apple player with full HDR support (10-bit+)"
         case .mpv:
-            return "FFmpeg-based player with advanced codec support (8-bit only)"
+            return "MPVKit-backed player with gpu-next and advanced codec support"
         }
     }
 
@@ -34,9 +38,9 @@ enum PlayerBackend: String, CaseIterable, Codable {
         case .mpv:
             return """
             • Direct MKV playback (no remux)
-            • Advanced codec support
-            • Limited to 8-bit color (OpenGL ES)
-            • Higher CPU usage
+            • gpu-next + MoltenVK rendering path
+            • Advanced codec/subtitle track support
+            • Better format resilience for Plex libraries
             """
         }
     }
@@ -44,7 +48,7 @@ enum PlayerBackend: String, CaseIterable, Codable {
     var supportsNativeHDR: Bool {
         switch self {
         case .avkit: return true
-        case .mpv: return false  // Limited to 8-bit via OpenGL ES
+        case .mpv: return true
         }
     }
 
@@ -65,7 +69,7 @@ enum PlayerBackend: String, CaseIterable, Codable {
     var supports10BitColor: Bool {
         switch self {
         case .avkit: return true
-        case .mpv: return false
+        case .mpv: return true
         }
     }
 }
