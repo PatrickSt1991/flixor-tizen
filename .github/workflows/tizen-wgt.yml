@@ -119,7 +119,7 @@ jobs:
 
             ## Installation
             1. Enable Developer Mode on your Samsung TV
-            2. Install the `.wgt` with Tizen Studio or `sdb`
+            2. Sideload either `.wgt` via [Jellyfin2Samsung](https://github.com/Jellyfin2Samsung/Samsung-Jellyfin-Installer/releases/latest), Tizen Studio or `sdb`.
 
             Signed with a generated Tizen author certificate (developer-mode install).
           draft: false
