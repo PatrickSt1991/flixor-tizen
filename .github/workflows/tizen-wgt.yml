@@ -1,0 +1,82 @@
+name: Build Tizen WGT
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/tizen/**'
+      - 'packages/core/**'
+      - 'docker/tizen/**'
+      - '.github/workflows/tizen-wgt.yml'
+  workflow_dispatch:
+
+jobs:
+  # 1. Build the web bundle on Node 22 (same as the existing Tizen CI job).
+  build-web:
+    name: Build web bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build @flixor/core
+        run: npm run build:core
+
+      - name: Build Tizen app
+        run: npm run build -w flixor-tizen
+
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: flixor-tizen-dist
+          path: apps/tizen/dist
+          if-no-files-found: error
+
+  # 2. Sign + package the bundle into a .wgt using the Tizen CLI container.
+  package-wgt:
+    name: Package .wgt
+    runs-on: ubuntu-latest
+    needs: build-web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: flixor-tizen-dist
+          path: dist
+
+      - name: Build Tizen CLI image
+        uses: docker/build-push-action@v6
+        with:
+          context: docker/tizen
+          tags: flixor-tizen-build:latest
+          push: false
+          load: true
+
+      - name: Package (sign) the wgt
+        uses: addnab/docker-run-action@v3
+        with:
+          image: flixor-tizen-build:latest
+          # Mount the prebuilt bundle at /work and collect the wgt from /output.
+          options: >-
+            -v ${{ github.workspace }}/dist:/work
+            -v ${{ github.workspace }}/output:/output
+            -e AUTHOR_P12_B64=${{ secrets.TIZEN_AUTHOR_P12_B64 }}
+            -e AUTHOR_P12_PASS=${{ secrets.TIZEN_AUTHOR_P12_PASS }}
+            -e DIST_P12_B64=${{ secrets.TIZEN_DIST_P12_B64 }}
+            -e DIST_P12_PASS=${{ secrets.TIZEN_DIST_P12_PASS }}
+
+      - name: Upload wgt
+        uses: actions/upload-artifact@v4
+        with:
+          name: Flixor-wgt
+          path: output/*.wgt
+          if-no-files-found: error
