@@ -1,82 +1,127 @@
 name: Build Tizen WGT
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
       - 'apps/tizen/**'
       - 'packages/core/**'
-      - 'docker/tizen/**'
       - '.github/workflows/tizen-wgt.yml'
-  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  TIZEN_STUDIO_VER: "5.5"
 
 jobs:
-  # 1. Build the web bundle on Node 22 (same as the existing Tizen CI job).
-  build-web:
-    name: Build web bundle
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
 
+      - name: Install expect
+        run: sudo apt-get update && sudo apt-get install -y expect
+
+      - name: Download Tizen Studio CLI
+        run: |
+          curl -o tizen-installer \
+            "https://download.tizen.org/sdk/Installer/tizen-studio_${TIZEN_STUDIO_VER}/web-cli_Tizen_Studio_${TIZEN_STUDIO_VER}_ubuntu-64.bin"
+
+      - name: Install Tizen Studio CLI
+        run: |
+          chmod +x tizen-installer
+          ./tizen-installer --accept-license "${GITHUB_WORKSPACE}/tizen-studio"
+          rm tizen-installer
+
+      - name: Create signing certificate
+        run: |
+          TIZEN="${GITHUB_WORKSPACE}/tizen-studio/tools/ide/bin/tizen"
+          "$TIZEN" certificate -a Flixor -p 1234 -c US -s California -ct SanFrancisco \
+            -o Flixor -n Flixor -e flixor@example.org -f flixor
+          "$TIZEN" security-profiles add -n Flixor \
+            -a "${GITHUB_WORKSPACE}/tizen-studio-data/keystore/author/flixor.p12" -p 1234
+          "$TIZEN" cli-config "profiles.path=${GITHUB_WORKSPACE}/tizen-studio-data/profile/profiles.xml"
+
+      # --- Flixor web bundle (vite emits config.xml + icon at apps/tizen/dist root) ---
       - name: Install deps
         run: npm ci
 
       - name: Build @flixor/core
         run: npm run build:core
 
-      - name: Build Tizen app
+      - name: Build Tizen web bundle
         run: npm run build -w flixor-tizen
 
-      - name: Upload dist
-        uses: actions/upload-artifact@v4
-        with:
-          name: flixor-tizen-dist
-          path: apps/tizen/dist
-          if-no-files-found: error
+      # --- Sign + package (non-interactive, via expect — same as jellyfin-avplay) ---
+      - name: Prepare profile passwords for non-interactive signing
+        run: |
+          PXML="${GITHUB_WORKSPACE}/tizen-studio-data/profile/profiles.xml"
+          sed -i "s|${GITHUB_WORKSPACE}/tizen-studio-data/keystore/author/flixor.pwd|1234|g" "$PXML"
+          sed -i "s|${GITHUB_WORKSPACE}/tizen-studio-data/tools/certificate-generator/certificates/distributor/tizen-distributor-signer.pwd|tizenpkcs12passfordsigner|g" "$PXML"
+          sed -i 's|password=""|password="tizenpkcs12passfordsigner"|g' "$PXML"
 
-  # 2. Sign + package the bundle into a .wgt using the Tizen CLI container.
-  package-wgt:
-    name: Package .wgt
-    runs-on: ubuntu-latest
-    needs: build-web
-    steps:
-      - uses: actions/checkout@v4
+      - name: Create expect script
+        run: |
+          cat > package.exp << 'EOF'
+          #!/usr/bin/expect -f
+          set timeout 300
+          spawn $env(GITHUB_WORKSPACE)/tizen-studio/tools/ide/bin/tizen package -t wgt -s Flixor -- $env(GITHUB_WORKSPACE)/apps/tizen/dist
+          expect {
+            "Author password:" { send "1234\r"; exp_continue }
+            "Save author password" { send "n\r"; exp_continue }
+            "Distributor1 password:" { send "tizenpkcs12passfordsigner\r"; exp_continue }
+            "Save distributor1 password" { send "n\r"; exp_continue }
+            eof
+          }
+          EOF
+          chmod +x package.exp
 
-      - name: Download dist
-        uses: actions/download-artifact@v4
-        with:
-          name: flixor-tizen-dist
-          path: dist
+      - name: Package WGT
+        run: |
+          ./package.exp
+          mkdir -p release
+          mv apps/tizen/dist/Flixor.wgt release/Flixor.wgt
 
-      - name: Build Tizen CLI image
-        uses: docker/build-push-action@v6
-        with:
-          context: docker/tizen
-          tags: flixor-tizen-build:latest
-          push: false
-          load: true
+      - name: Get version info
+        id: version
+        run: |
+          VERSION=$(node -p "require('./apps/tizen/package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "date_tag=$(date +'%Y-%m-%d-%H%M')" >> "$GITHUB_OUTPUT"
+          echo "date_pretty=$(date +'%Y-%m-%d %H:%M')" >> "$GITHUB_OUTPUT"
 
-      - name: Package (sign) the wgt
-        uses: addnab/docker-run-action@v3
-        with:
-          image: flixor-tizen-build:latest
-          # Mount the prebuilt bundle at /work and collect the wgt from /output.
-          options: >-
-            -v ${{ github.workspace }}/dist:/work
-            -v ${{ github.workspace }}/output:/output
-            -e AUTHOR_P12_B64=${{ secrets.TIZEN_AUTHOR_P12_B64 }}
-            -e AUTHOR_P12_PASS=${{ secrets.TIZEN_AUTHOR_P12_PASS }}
-            -e DIST_P12_B64=${{ secrets.TIZEN_DIST_P12_B64 }}
-            -e DIST_P12_PASS=${{ secrets.TIZEN_DIST_P12_PASS }}
-
-      - name: Upload wgt
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Flixor-wgt
-          path: output/*.wgt
+          path: release/*.wgt
           if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: 'v${{ steps.version.outputs.version }}-${{ steps.version.outputs.date_tag }}'
+          name: 'Flixor Tizen v${{ steps.version.outputs.version }} - ${{ steps.version.outputs.date_pretty }}'
+          files: release/*.wgt
+          body: |
+            # Flixor for Samsung Tizen TV
+
+            Built on ${{ steps.version.outputs.date_pretty }} from `apps/tizen`.
+
+            ## Installation
+            1. Enable Developer Mode on your Samsung TV
+            2. Install the `.wgt` with Tizen Studio or `sdb`
+
+            Signed with a generated Tizen author certificate (developer-mode install).
+          draft: false
+          prerelease: false
