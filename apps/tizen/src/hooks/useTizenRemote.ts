@@ -15,6 +15,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 // Tizen key codes
 const KEY = {
   BACK: 10009,
+  EXIT: 10182,
   MEDIA_PLAY_PAUSE: 10252,
   MEDIA_PLAY: 415,
   MEDIA_PAUSE: 19,
@@ -52,8 +53,11 @@ export function useTizenRemote() {
     // Register Tizen TV input device keys
     if (tizen?.tvinputdevice) {
       try {
+        // NOTE: 'Exit' is deliberately NOT registered — registering a key
+        // takes ownership away from the system, so the TV stopped closing
+        // the app on EXIT. Unregistered, the system handles EXIT natively.
         const keys = [
-          'Return', 'Exit',
+          'Return',
           'Left', 'Up', 'Right', 'Down', 'Enter',
           'Menu',
           'MediaPlayPause', 'MediaPlay', 'MediaPause', 'MediaStop',
@@ -85,6 +89,16 @@ export function useTizenRemote() {
       const now = Date.now();
       if (now - lastActionKeyTime < ACTION_DEBOUNCE_MS) return;
       lastActionKeyTime = now;
+
+      // ── Exit: close the app outright (defensive — normally the system
+      // handles EXIT since we no longer register the key) ─────────
+      if (keyCode === KEY.EXIT) {
+        e.preventDefault();
+        try {
+          tizen?.application?.getCurrentApplication().exit();
+        } catch { /* ignore */ }
+        return;
+      }
 
       // ── Back / Return ──────────────────────────────────────────
       if (keyCode === KEY.BACK || e.key === 'Backspace' || e.key === 'Escape') {

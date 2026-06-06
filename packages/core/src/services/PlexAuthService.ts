@@ -216,6 +216,8 @@ export class PlexAuthService {
         local: conn.local,
         relay: conn.relay,
         IPv6: conn.IPv6,
+        address: conn.address,
+        port: conn.port,
       })),
     }));
   }
@@ -226,14 +228,26 @@ export class PlexAuthService {
    */
   async testConnection(connection: PlexConnection, token: string): Promise<boolean> {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      // AbortController only exists from Chrome 66 — Tizen TV WebViews
+      // (Chrome 47/56/63) don't have it and it is NOT polyfilled by core-js.
+      // `new AbortController()` would throw here and this catch would report
+      // every connection as dead. Feature-detect and fall back to a
+      // Promise.race timeout (the request keeps running, but the result is
+      // discarded — fine for a connectivity probe).
+      const controller =
+        typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timeoutId = setTimeout(() => controller?.abort(), 5000);
 
-      const response = await fetch(`${connection.uri}/identity`, {
-        method: 'GET',
-        headers: this.getHeaders(token),
-        signal: controller.signal,
-      });
+      const response = await Promise.race([
+        fetch(`${connection.uri}/identity`, {
+          method: 'GET',
+          headers: this.getHeaders(token),
+          ...(controller ? { signal: controller.signal } : {}),
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Connection test timed out')), 5000)
+        ),
+      ]);
 
       clearTimeout(timeoutId);
       return response.ok;
@@ -262,6 +276,25 @@ export class PlexAuthService {
       const isValid = await this.testConnection(conn, token);
       if (isValid) {
         return conn;
+      }
+    }
+
+    // Last resort: synthesize plain-HTTP URIs for local connections.
+    // Old TV WebViews can reject the *.plex.direct TLS certificate (firmware
+    // CA store predating Let's Encrypt's ISRG root), so the https uri fails
+    // even though the server is reachable. PMS with the default
+    // "Secure connections: Preferred" accepts plain http on the LAN.
+    for (const conn of sortedConnections) {
+      if (!conn.local || conn.relay || !conn.address || !conn.port) continue;
+      if (conn.uri.startsWith('http://')) continue; // already tested above
+      const httpConn: PlexConnection = {
+        ...conn,
+        protocol: 'http',
+        uri: `http://${conn.address}:${conn.port}`,
+      };
+      const isValid = await this.testConnection(httpConn, token);
+      if (isValid) {
+        return httpConn;
       }
     }
 

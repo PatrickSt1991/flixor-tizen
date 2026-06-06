@@ -46,6 +46,10 @@ export interface PlexConnection {
   local: boolean;
   relay: boolean;
   IPv6: boolean;
+  /** Raw host/port from plex.tv resources — used to synthesize a plain-HTTP
+   *  fallback URI on devices whose TLS stack rejects *.plex.direct certs. */
+  address?: string;
+  port?: number;
 }
 
 // Plex Library
