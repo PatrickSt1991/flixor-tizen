@@ -8,11 +8,19 @@ export default defineConfig({
   plugins: [
     react(),
     legacy({
-      targets: ['defaults', 'not IE 11', 'chrome 60'],
+      // Tizen 5.0 ships Chromium 63. It supports ES modules, so it would load the
+      // modern (type="module") bundle — which contains optional chaining (?.) from
+      // hls.js/dashjs that Chrome 63 can't parse, killing the whole module graph
+      // (blank app stuck on the static "FLIXOR LOADING..." placeholder in index.html).
+      // renderModernChunks:false emits a single fully-transpiled SystemJS bundle for
+      // all browsers, so the TV never receives unparseable syntax.
+      targets: ['chrome >= 63'],
+      renderModernChunks: false,
     }),
   ],
   base: './',
   build: {
+    target: ['chrome63'],
     outDir: 'dist',
     emptyOutDir: true,
     chunkSizeWarningLimit: 1600, // vendor-streaming (hls.js + dashjs) is ~1.5MB
