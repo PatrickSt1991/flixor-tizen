@@ -1,19 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Manifest aligned with a wgt proven to launch on the target set (VLC TV):
+     required_version 2.4, no <feature network.internet> (an unsupported
+     feature key is a hard launch filter on Samsung firmware: the app
+     installs but never starts), and only privileges the code actually uses
+     (tizen.tvinputdevice.registerKey needs tv.inputdevice; tv.window and
+     tv.audio webapis are never called). -->
 <widget xmlns:tizen="http://tizen.org/ns/widgets"
     xmlns="http://www.w3.org/ns/widgets" id="http://flixor.tv/Flixor" version="1.0.0" viewmodes="maximized">
-    <tizen:application id="FlixTVApp1.Flixor" package="FlixTVApp1" required_version="4.0"/>
+    <tizen:application id="FlixTVApp1.Flixor" package="FlixTVApp1" required_version="2.4"/>
     <content src="index.html"/>
     <feature name="http://tizen.org/feature/screen.size.normal.1080.1920"/>
-    <feature name="http://tizen.org/feature/network.internet"/>
     <icon src="icon.png"/>
     <name>Flixor</name>
+    <author>Patrick</author>
+    <description>Flixor — a Netflix-style Plex client for Samsung Tizen TV.</description>
     <tizen:profile name="tv-samsung"/>
     <tizen:setting screen-orientation="landscape" context-menu="enable" background-support="disable" encryption="disable" install-location="auto" hwkey-event="enable"/>
     <access origin="*" subdomains="true"/>
-    <tizen:allow-navigation>*</tizen:allow-navigation>
     <tizen:privilege name="http://tizen.org/privilege/internet"/>
-    <tizen:privilege name="http://tizen.org/privilege/tv.window"/>
-    <tizen:privilege name="http://tizen.org/privilege/tv.audio"/>
+    <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
     <tizen:privilege name="http://tizen.org/privilege/filesystem.read"/>
     <tizen:privilege name="http://tizen.org/privilege/filesystem.write"/>
 </widget>
