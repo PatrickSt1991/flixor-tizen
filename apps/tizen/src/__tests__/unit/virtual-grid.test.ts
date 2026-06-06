@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeLayout } from '../../utils/virtualGridUtils';
+import { computeLayout } from '../../components/VirtualGrid';
 
 describe('VirtualGrid — computeLayout Unit Tests', () => {
   // --- Zero items ---

@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { buildChips } from "../../utils/technicalChipsUtils";
-import { TechnicalChips } from "../../components/TechnicalChips";
+import { buildChips, TechnicalChips } from "../../components/TechnicalChips";
 
 // --- buildChips pure function tests ---
 

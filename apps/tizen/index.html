@@ -34,31 +34,19 @@
       "
     ></div>
     <script>
-      (function () {
-        function show(text) {
-          var el = document.getElementById("debug-overlay");
-          if (!el) return;
-          el.style.display = "block";
-          el.innerHTML += "<p>" + text + "</p>";
-        }
-        // Runtime errors.
-        window.onerror = function (msg, url, line, col) {
-          show("Error: " + msg + "<br>@ " + (url || "") + ":" + line + ":" + col);
-          return false;
-        };
-        // Resource load failures (script/link/img) do NOT fire window.onerror;
-        // catch them in the capture phase. This is what surfaces a blocked or
-        // missing bundle on a TV where the inspector is unavailable.
-        window.addEventListener("error", function (e) {
-          var t = e.target || e.srcElement;
-          if (t && (t.src || t.href)) show("Load failed: " + (t.src || t.href));
-        }, true);
-        // Unhandled promise rejections (e.g. a hung init).
-        window.addEventListener("unhandledrejection", function (e) {
-          var r = e.reason;
-          show("Unhandled rejection: " + (r && (r.stack || r.message) ? (r.stack || r.message) : r));
-        });
-      })();
+      window.onerror = function (msg, url, line, col, error) {
+        var el = document.getElementById("debug-overlay");
+        el.style.display = "block";
+        el.innerHTML +=
+          "<p>Error: " + msg + "<br>@ " + url + ":" + line + "</p>";
+        return false;
+      };
+      console.log("Flixor Tizen Hub Started");
+      if (typeof tizen !== 'undefined') {
+        console.log("Tizen Object Detected:", Object.keys(tizen));
+      } else {
+        console.warn("Tizen Object NOT Detected (not on Tizen device?)");
+      }
     </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
