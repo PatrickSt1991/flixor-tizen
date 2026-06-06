@@ -50,12 +50,12 @@ function FocusableGridItem<T extends VirtualGridItem>({
         if (rect.bottom > containerRect.bottom - 40) {
           container.scrollBy({
             top: rect.bottom - containerRect.bottom + 100,
-            behavior: "smooth",
+            behavior: "auto",
           });
         } else if (rect.top < containerRect.top + 40) {
           container.scrollBy({
             top: rect.top - containerRect.top - 100,
-            behavior: "smooth",
+            behavior: "auto",
           });
         }
       }
@@ -122,16 +122,29 @@ export function VirtualGrid<T extends VirtualGridItem>({
   hasMore,
   loadMore,
 }: VirtualGridProps<T>) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(600);
   const [containerWidth, setContainerWidth] = useState(0);
   const rafRef = useRef<number | null>(null);
   const lastScrollTopRef = useRef(0);
 
+  // norigin's ref is attached to the scrolling <div> via ref={focusRef}, so
+  // React populates focusRef.current at commit — i.e. BEFORE this effect runs.
+  // (The previous code measured a separate containerRef that was only synced
+  // in a *later* effect, so at mount it was null, the effect bailed, width
+  // stayed 0, computeLayout fell back to one column and the scroll listener
+  // never attached: no grid, no scrolling.)
+  const { ref: focusRef, focusKey } = useFocusable({
+    trackChildren: true,
+    isFocusBoundary: true,
+  });
+  // Alias for the InfiniteSentinel rootRef below; effects read focusRef.current
+  // directly so the deps linter recognizes it as a ref.
+  const containerRef = focusRef as React.RefObject<HTMLDivElement>;
+
   // Measure container and attach scroll/resize listeners
   useEffect(() => {
-    const el = containerRef.current;
+    const el = focusRef.current;
     if (!el) return;
 
     const measure = () => {
@@ -172,6 +185,8 @@ export function VirtualGrid<T extends VirtualGridItem>({
         window.removeEventListener("resize", measure);
       }
     };
+    // focusRef is a stable ref from norigin; measure once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const layout = useMemo(
@@ -224,19 +239,6 @@ export function VirtualGrid<T extends VirtualGridItem>({
   const handleLoadMore = useCallback(() => {
     loadMore?.();
   }, [loadMore]);
-
-  const { ref: focusRef, focusKey } = useFocusable({
-    trackChildren: true,
-    isFocusBoundary: true,
-  });
-
-  // Sync containerRef with focusRef if needed (containerRef is used by InfiniteSentinel)
-  useEffect(() => {
-    if (focusRef.current) {
-      (containerRef as React.MutableRefObject<HTMLDivElement | null>).current =
-        focusRef.current;
-    }
-  }, [focusRef]);
 
   return (
     <FocusContext.Provider value={focusKey}>
