@@ -2256,10 +2256,73 @@ input:focus,
   margin: 0;
 }
 
+.pin-status {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 18px;
+  margin: 0;
+}
+
 .pin-actions {
   display: flex;
   gap: 20px;
   margin-top: 10px;
+}
+
+/* PIN entry dots (●●○○ progress) */
+.pin-dots {
+  display: flex;
+  gap: 18px;
+  padding: 8px 0;
+}
+
+.pin-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.pin-dot.filled {
+  background: #ff4b2b;
+  border-color: #ff4b2b;
+}
+
+/* On-screen PIN pad — D-pad navigable */
+.pin-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 90px);
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.pin-key {
+  height: 70px;
+  font-size: 28px;
+  font-weight: 700;
+  font-family: inherit;
+  color: white;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  cursor: pointer;
+  outline: none;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+}
+
+.pin-key.focused {
+  border-color: #ff4b2b;
+  background: rgba(255, 75, 43, 0.25);
+  transform: scale(1.08);
+  box-shadow:
+    0 0 0 4px rgba(255, 75, 43, 0.4),
+    0 0 20px rgba(255, 75, 43, 0.2);
+}
+
+.pin-key:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 /* Content Row */

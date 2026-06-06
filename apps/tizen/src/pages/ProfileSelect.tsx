@@ -20,6 +20,42 @@ interface PinDialogProps {
   onCancel: () => void;
 }
 
+/**
+ * On-screen key for the PIN pad — focusable via D-pad spatial navigation.
+ * A text <input> is useless on a TV: typing needs the browser IME (which
+ * never opens for JS focus) and many Samsung smart remotes have no number
+ * row at all. Every digit must be enterable with arrows + OK alone.
+ */
+function PinKey({
+  label,
+  onPress,
+  disabled,
+  wide,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  wide?: boolean;
+}) {
+  const { ref, focused } = useFocusable({
+    onEnterPress: () => {
+      if (!disabled) onPress();
+    },
+  });
+  return (
+    <button
+      ref={ref}
+      className={`pin-key${wide ? " wide" : ""}${focused ? " focused" : ""}`}
+      onClick={() => {
+        if (!disabled) onPress();
+      }}
+      disabled={disabled}
+    >
+      {label}
+    </button>
+  );
+}
+
 function PinDialog({
   user,
   error,
@@ -39,20 +75,6 @@ function PinDialog({
     isFocusBoundary: true,
   });
 
-  const { ref: inputRef, focused: inputFocused } = useFocusable({
-    onEnterPress: () => {
-      // When Enter is pressed on the input, move browser focus to it for typing
-      const el = inputRef.current as HTMLInputElement | null;
-      el?.focus();
-    },
-    onArrowPress: (direction) => {
-      // Allow spatial nav to handle up/down so focus can reach buttons below
-      if (direction === "down" || direction === "up") return false;
-      // Left/right stay in input for cursor movement
-      return true;
-    },
-  });
-
   // Focus the dialog container on mount so spatial nav owns focus
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -61,17 +83,17 @@ function PinDialog({
     return () => clearTimeout(timer);
   }, [focusSelf]);
 
-  // Sync browser focus with spatial nav focus for the input
-  useEffect(() => {
-    if (inputFocused) {
-      const el = inputRef.current as HTMLInputElement | null;
-      el?.focus();
-    }
-  }, [inputFocused, inputRef]);
+  const appendDigit = useCallback(
+    (d: string) => {
+      if (submitting) return;
+      setPin((p) => (p.length >= 4 ? p : p + d));
+    },
+    [submitting],
+  );
 
-  const handleSubmit = useCallback(() => {
-    if (pin.length === 4 && !submitting) onSubmit(pin);
-  }, [pin, submitting, onSubmit]);
+  const backspace = useCallback(() => {
+    setPin((p) => p.slice(0, -1));
+  }, []);
 
   // Auto-submit when 4 digits are entered
   useEffect(() => {
@@ -80,13 +102,41 @@ function PinDialog({
     }
   }, [pin, submitting, onSubmit]);
 
-  const { ref: submitRef, focused: submitFocused } = useFocusable({
-    onEnterPress: handleSubmit,
-  });
+  // Wrong PIN: clear the entry so the user can retype immediately.
+  // (Canonical adjust-state-during-render pattern instead of an effect.)
+  const [prevError, setPrevError] = useState<string | null>(null);
+  if (error !== prevError) {
+    setPrevError(error);
+    if (error) setPin("");
+  }
 
-  const { ref: cancelRef, focused: cancelFocused } = useFocusable({
-    onEnterPress: onCancel,
-  });
+  // Physical remote keys: number row types directly (keycodes 48-57 / numpad
+  // 96-105); BACK deletes a digit, or closes the dialog when empty. Capture
+  // phase + stopImmediatePropagation keeps useTizenRemote's global BACK
+  // handler from navigating the page away underneath the dialog.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const kc = e.keyCode || e.which;
+      if ((kc >= 48 && kc <= 57) || (kc >= 96 && kc <= 105)) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        appendDigit(String(kc >= 96 ? kc - 96 : kc - 48));
+        return;
+      }
+      if (kc === 10009 || e.key === "Backspace" || e.key === "Escape") {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (pin.length > 0) {
+          backspace();
+        } else {
+          onCancel();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown, { capture: true });
+    return () =>
+      window.removeEventListener("keydown", onKeyDown, { capture: true });
+  }, [pin.length, appendDigit, backspace, onCancel]);
 
   return (
     <div className="pin-overlay">
@@ -94,39 +144,30 @@ function PinDialog({
         <div ref={dialogRef} className="pin-dialog">
           <h2 className="pin-dialog-title">Enter PIN for {user.title}</h2>
 
-          <input
-            ref={inputRef}
-            className={`pin-input${inputFocused ? " focused" : ""}`}
-            type="password"
-            inputMode="numeric"
-            maxLength={4}
-            placeholder="••••"
-            value={pin}
-            onChange={(e) => {
-              const val = e.target.value.replace(/\D/g, "").slice(0, 4);
-              setPin(val);
-            }}
-          />
+          <div className="pin-dots" aria-label={`${pin.length} of 4 digits entered`}>
+            {[0, 1, 2, 3].map((i) => (
+              <span
+                key={i}
+                className={`pin-dot${i < pin.length ? " filled" : ""}`}
+              />
+            ))}
+          </div>
 
           {error && <p className="pin-error">{error}</p>}
+          {submitting && <p className="pin-status">Verifying…</p>}
 
-          <div className="pin-actions">
-            <button
-              ref={cancelRef}
-              className={`btn-secondary${cancelFocused ? " focused" : ""}`}
-              onClick={onCancel}
-              disabled={submitting}
-            >
-              Cancel
-            </button>
-            <button
-              ref={submitRef}
-              className={`btn-primary${submitFocused ? " focused" : ""}`}
-              onClick={handleSubmit}
-              disabled={pin.length !== 4 || submitting}
-            >
-              {submitting ? "Verifying…" : "Submit"}
-            </button>
+          <div className="pin-pad">
+            {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
+              <PinKey
+                key={d}
+                label={d}
+                disabled={submitting}
+                onPress={() => appendDigit(d)}
+              />
+            ))}
+            <PinKey label="⌫" disabled={submitting} onPress={backspace} />
+            <PinKey label="0" disabled={submitting} onPress={() => appendDigit("0")} />
+            <PinKey label="✕" disabled={submitting} onPress={onCancel} />
           </div>
         </div>
       </FocusContext.Provider>

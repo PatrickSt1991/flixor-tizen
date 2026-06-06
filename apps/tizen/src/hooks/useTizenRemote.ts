@@ -59,6 +59,8 @@ export function useTizenRemote() {
         const keys = [
           'Return',
           'Left', 'Up', 'Right', 'Down', 'Enter',
+          // Number row (remotes that have one) — lets PIN entry type directly
+          '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
           'Menu',
           'MediaPlayPause', 'MediaPlay', 'MediaPause', 'MediaStop',
           'MediaRewind', 'MediaFastForward',
