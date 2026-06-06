@@ -97,8 +97,10 @@ describe("ProfileSelect", () => {
     });
     fireEvent.click(screen.getByText("Kid"));
     expect(screen.getByText("Enter PIN for Kid")).toBeInTheDocument();
-    expect(screen.getByText("Cancel")).toBeInTheDocument();
-    expect(screen.getByText("Submit")).toBeInTheDocument();
+    // On-screen D-pad keypad: digits + backspace + cancel keys
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("0")).toBeInTheDocument();
+    expect(screen.getByText("✕")).toBeInTheDocument();
   });
 
   it("shows lock icon for protected profiles", async () => {
@@ -130,7 +132,7 @@ describe("ProfileSelect", () => {
     });
     fireEvent.click(screen.getByText("Kid"));
     expect(screen.getByText("Enter PIN for Kid")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Cancel"));
+    fireEvent.click(screen.getByText("✕"));
     expect(screen.queryByText("Enter PIN for Kid")).not.toBeInTheDocument();
   });
 });

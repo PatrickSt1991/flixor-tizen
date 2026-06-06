@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { describe, it, expect } from "vitest";
-import { buildChips, type TechnicalChipsProps } from "../../components/TechnicalChips";
+import { buildChips, type TechnicalChipsProps } from "../../utils/technicalChipsUtils";
 
 // Feature: tizen-parity-phase2, Property 19: Technical chips generation and formatting
 

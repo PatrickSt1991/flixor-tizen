@@ -16,12 +16,13 @@ export function MoodTags({ genres }: MoodTagsProps) {
   if (moods.length === 0) return null;
 
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+    <div style={{ display: "flex", flexWrap: "wrap", margin: "0 -6px -6px 0" }}>
       {moods.map((mood) => (
         <span
           key={mood}
           style={{
             display: "inline-block",
+            margin: "0 6px 6px 0",
             padding: "4px 12px",
             borderRadius: 999,
             background: "rgba(255,255,255,0.12)",

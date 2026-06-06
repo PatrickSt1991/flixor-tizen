@@ -43,10 +43,11 @@ const styles = {
   row: {
     display: 'flex',
     alignItems: 'center',
-    gap: 8,
     flexWrap: 'wrap' as const,
+    margin: '0 -8px -8px 0',
   },
   icon: {
+    margin: '0 8px 8px 0',
     width: 36,
     height: 36,
     borderRadius: '50%',

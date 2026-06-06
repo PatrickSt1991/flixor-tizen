@@ -60,10 +60,10 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 24,
   },
   textBlock: {
     flex: 1,
+    marginRight: 24,
   },
   title: {
     color: '#e5e5e5',

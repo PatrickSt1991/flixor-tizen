@@ -74,12 +74,16 @@ function CreditCard({
       <div
         style={{
           width: "100%",
-          aspectRatio: "2/3",
+          /* 2/3 via padding hack — aspect-ratio is Chrome 88+ */
+          position: "relative",
+          height: 0,
+          paddingTop: "150%",
           borderRadius: 6,
           overflow: "hidden",
           background: "#333",
         }}
       >
+        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}>
         {item.posterPath ? (
           <SmartImage
             src={item.posterPath}
@@ -102,6 +106,7 @@ function CreditCard({
             No Image
           </div>
         )}
+        </div>
       </div>
       <div style={{ marginTop: 6, padding: "0 2px" }}>
         <div
@@ -168,7 +173,9 @@ function CreditRow({
         </h3>
         <div
           style={{
-            display: "flex",
+            display: "grid",
+            gridAutoFlow: "column",
+            justifyContent: "start",
             gap: 12,
             overflowX: "auto",
             paddingBottom: 8,
@@ -382,7 +389,6 @@ export function PersonModal({ open, onClose, personId, name }: PersonModalProps)
               <div
                 style={{
                   display: "flex",
-                  gap: 24,
                   padding: 24,
                   borderBottom: "1px solid rgba(255,255,255,0.1)",
                   position: "relative",
@@ -391,7 +397,7 @@ export function PersonModal({ open, onClose, personId, name }: PersonModalProps)
                 <CloseButton onClose={onClose} />
 
                 {/* Profile photo */}
-                <div style={{ flexShrink: 0 }}>
+                <div style={{ flexShrink: 0, marginRight: 24 }}>
                   {person.profile_path ? (
                     <SmartImage
                       src={person.profile_path}
@@ -438,14 +444,13 @@ export function PersonModal({ open, onClose, personId, name }: PersonModalProps)
                     style={{
                       display: "flex",
                       flexWrap: "wrap",
-                      gap: "4px 16px",
                       color: "rgba(255,255,255,0.5)",
                       fontSize: 14,
-                      marginBottom: 12,
+                      marginBottom: 8,
                     }}
                   >
                     {person.birthday && (
-                      <span>
+                      <span style={{ margin: "0 16px 4px 0" }}>
                         Born:{" "}
                         {new Date(person.birthday).toLocaleDateString("en-US", {
                           month: "long",
@@ -455,7 +460,7 @@ export function PersonModal({ open, onClose, personId, name }: PersonModalProps)
                       </span>
                     )}
                     {person.place_of_birth && (
-                      <span>{person.place_of_birth}</span>
+                      <span style={{ margin: "0 16px 4px 0" }}>{person.place_of_birth}</span>
                     )}
                   </div>
 

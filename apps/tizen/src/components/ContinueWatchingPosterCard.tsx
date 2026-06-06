@@ -38,7 +38,6 @@ export function ContinueWatchingPosterCard({
         style={{
           position: "relative",
           overflow: "hidden",
-          aspectRatio: "2 / 3",
           border: focused ? "3px solid #ff4b2b" : "3px solid transparent",
           transition: "all 0.2s ease",
           transform: focused ? "scale(1.05)" : "scale(1)",

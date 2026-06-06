@@ -102,12 +102,13 @@ describe("ContinueWatchingPosterCard", () => {
     expect(bar).toBeNull();
   });
 
-  it("uses poster aspect ratio (2/3)", () => {
+  it("uses the poster card class (2/3 ratio comes from .tv-card.poster CSS)", () => {
     const { container } = render(
       <ContinueWatchingPosterCard item={makeItem()} onSelect={vi.fn()} />,
     );
+    // aspect-ratio is unsupported on Tizen WebViews; the 2/3 shape is enforced
+    // by the .tv-card.poster rule (240x360) instead of an inline style.
     const btn = container.querySelector(".tv-card.poster");
     expect(btn).toBeTruthy();
-    expect(btn?.getAttribute("style")).toContain("aspect-ratio: 2 / 3");
   });
 });

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { deriveMoods } from "../../utils/moodTagsUtils";
-import { buildChips } from "../../components/TechnicalChips";
+import { buildChips } from "../../utils/technicalChipsUtils";
 import { detectAccessibilityBadges } from "../../utils/accessibilityUtils";
 import { getProgressDisplay } from "../../utils/episodeCardUtils";
 

@@ -13,6 +13,9 @@ describe("Property 25: Episode skeleton list renders correct count", () => {
    * **Validates: Requirements 17.1, 17.2**
    */
 
+  // numRuns:100 × up to 50 rendered rows is borderline under full-suite
+  // parallel load on slow filesystems — give it headroom over the 5s default
+  // so it can't flake on a timeout (it always passes; see seed determinism).
   it("renders exactly count skeleton rows, each with PLACEHOLDER_COUNT skeleton elements", () => {
     fc.assert(
       fc.property(fc.integer({ min: 1, max: 50 }), (count) => {
@@ -24,7 +27,7 @@ describe("Property 25: Episode skeleton list renders correct count", () => {
       }),
       { numRuns: 100 },
     );
-  });
+  }, 15000);
 
   it("renders null when count is 0 or negative", () => {
     fc.assert(

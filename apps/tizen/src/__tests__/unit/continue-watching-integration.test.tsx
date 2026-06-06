@@ -271,12 +271,11 @@ describe("Card style switching via continueWatchingCardStyle setting", () => {
         ? ContinueWatchingPosterCard
         : ContinueWatchingLandscapeCard;
 
-    // Poster card has aspect-ratio 2/3
+    // Poster card 2/3 shape comes from the .tv-card.poster CSS rule
     const { container } = render(
       <CardComponent item={makeItem()} onSelect={vi.fn()} />,
     );
     const card = container.querySelector(".tv-card.poster");
     expect(card).toBeTruthy();
-    expect(card?.getAttribute("style")).toContain("aspect-ratio: 2 / 3");
   });
 });
