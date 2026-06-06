@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { init } from "@noriginmedia/norigin-spatial-navigation";
 import { useTizenRemote } from "./hooks/useTizenRemote";
@@ -10,7 +10,6 @@ import { UpdateBanner } from "./components/UpdateBanner";
 import { Home } from "./pages/Home";
 import { LibraryPage } from "./pages/Library";
 import { DetailsPage } from "./pages/Details";
-import { PlayerPage } from "./pages/Player";
 import { SearchPage } from "./pages/Search";
 import { Login } from "./pages/Login";
 import { SettingsPage } from "./pages/Settings";
@@ -23,6 +22,14 @@ import { ProfileSelect } from "./pages/ProfileSelect";
 import { BrowsePage } from "./pages/Browse";
 import { useToastState, ToastContext } from "./hooks/useToast";
 import { ToastContainer } from "./components/Toast";
+
+// Lazy-load the Player so vendor-streaming (hls.js + dashjs, ~1.5 MB) stays
+// out of the startup module graph. The Samsung launch splash only dismisses
+// once the page settles — parsing 1.5 MB of extra JS through SystemJS on a
+// TV SoC keeps the user staring at the OS spinner for tens of seconds.
+const PlayerPage = lazy(() =>
+  import("./pages/Player").then((m) => ({ default: m.PlayerPage }))
+);
 
 init({ debug: false, visualDebug: false });
 
@@ -146,7 +153,28 @@ function AppRoutes() {
         />
         <Route path="/library/:type" element={<LibraryPage />} />
         <Route path="/details/:ratingKey" element={<DetailsPage />} />
-        <Route path="/player/:ratingKey" element={<PlayerPage />} />
+        <Route
+          path="/player/:ratingKey"
+          element={
+            <Suspense
+              fallback={
+                <div
+                  className="tv-container"
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <h1 className="logo">FLIXOR</h1>
+                  <div className="loading-spinner"></div>
+                </div>
+              }
+            >
+              <PlayerPage />
+            </Suspense>
+          }
+        />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/mylist" element={<MyListPage />} />
         <Route path="/person/:id" element={<PersonPage />} />
