@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, it, expect } from 'vitest';
-import { computeLayout } from '../../components/VirtualGrid';
+import { computeLayout } from '../../utils/virtualGridUtils';
 
 // --- Arbitraries ---
 
