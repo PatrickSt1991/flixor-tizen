@@ -34,19 +34,73 @@
       "
     ></div>
     <script>
-      window.onerror = function (msg, url, line, col, error) {
-        var el = document.getElementById("debug-overlay");
-        el.style.display = "block";
-        el.innerHTML +=
-          "<p>Error: " + msg + "<br>@ " + url + ":" + line + "</p>";
-        return false;
-      };
-      console.log("Flixor Tizen Hub Started");
-      if (typeof tizen !== 'undefined') {
-        console.log("Tizen Object Detected:", Object.keys(tizen));
-      } else {
-        console.warn("Tizen Object NOT Detected (not on Tizen device?)");
-      }
+      // Boot diagnostics — there is no console on retail Tizen sets, so every
+      // failure mode must surface on the #debug-overlay. ES5 only.
+      (function () {
+        function show(text) {
+          var el = document.getElementById("debug-overlay");
+          if (!el) return;
+          el.style.display = "block";
+          var p = document.createElement("p");
+          p.textContent = text;
+          el.appendChild(p);
+        }
+        window.__flixorBooted = false;
+
+        // 1. Classic runtime errors (incl. syntax errors in classic scripts).
+        window.onerror = function (msg, url, line, col) {
+          show("Error: " + msg + " @ " + (url || "?") + ":" + line + ":" + col);
+          return false;
+        };
+        // 2. Resource/module load + parse failures. These fire an error event
+        //    on the element, NOT window.onerror — capture phase catches them.
+        window.addEventListener(
+          "error",
+          function (e) {
+            var t = e.target || e.srcElement;
+            if (t && t !== window && (t.src || t.href)) {
+              show(
+                "Load failed: <" + (t.tagName || "?").toLowerCase() + "> " +
+                (t.src || t.href)
+              );
+            }
+          },
+          true
+        );
+        // 3. Unhandled promise rejections (async init failures).
+        window.addEventListener("unhandledrejection", function (e) {
+          var r = e.reason;
+          show(
+            "Unhandled rejection: " +
+            (r && (r.stack || r.message) ? r.stack || r.message : String(r))
+          );
+        });
+        // 4. Boot watchdog: if React has not replaced #root within 10s and no
+        //    error fired either, report what the page actually loaded. A modern
+        //    (type=module) bundle that Chrome 63 cannot parse dies silently —
+        //    this makes that visible.
+        setTimeout(function () {
+          if (window.__flixorBooted) return;
+          show("BOOT WATCHDOG: app JS did not start within 10s.");
+          show("UA: " + navigator.userAgent);
+          var scripts = document.getElementsByTagName("script");
+          for (var i = 0; i < scripts.length; i++) {
+            if (scripts[i].src) {
+              show(
+                "script[" + (scripts[i].type || "classic") + (scripts[i].noModule ? ",nomodule" : "") +
+                "]: " + scripts[i].src
+              );
+            }
+          }
+        }, 10000);
+
+        console.log("Flixor Tizen Hub Started");
+        if (typeof tizen !== "undefined") {
+          console.log("Tizen Object Detected:", Object.keys(tizen));
+        } else {
+          console.warn("Tizen Object NOT Detected (not on Tizen device?)");
+        }
+      })();
     </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
