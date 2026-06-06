@@ -34,8 +34,8 @@ export function EpisodeLandscapeCard({
       style={{
         position: "relative",
         width: 300,
+        height: 187.5, /* 16/10 of 300 — aspect-ratio is Chrome 88+ */
         flexShrink: 0,
-        aspectRatio: "16 / 10",
         borderRadius: 12,
         overflow: "hidden",
         background: "#222",

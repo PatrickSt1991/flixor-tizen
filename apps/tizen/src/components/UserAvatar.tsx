@@ -40,7 +40,8 @@ export function UserAvatar({ thumb, title, onPress }: UserAvatarProps) {
       aria-label={`User profile: ${title}`}
       tabIndex={0}
       style={{
-        display: "flex",
+        display: "grid",
+        gridAutoFlow: "column",
         alignItems: "center",
         gap: 10,
         padding: 4,

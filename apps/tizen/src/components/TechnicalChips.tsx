@@ -4,47 +4,10 @@
  * Validates: Requirements 10.1–10.4 · Design §10
  */
 
-export interface TechnicalChipsProps {
-  resolution?: string;
-  bitrate?: number; // in kbps
-  videoCodec?: string;
-  audioCodec?: string;
-  audioChannels?: string;
-  hdr?: string;
-}
+import { buildChips } from "../utils/technicalChipsUtils";
+import type { TechnicalChipsProps } from "../utils/technicalChipsUtils";
 
-/**
- * Pure helper: build an array of formatted chip strings from present fields.
- * Skips undefined/empty fields. Returns the array (may be empty).
- */
-function buildChips(props: TechnicalChipsProps): string[] {
-  const chips: string[] = [];
-
-  if (props.resolution) {
-    chips.push(props.resolution);
-  }
-
-  if (props.bitrate != null && props.bitrate > 0) {
-    chips.push(`${(props.bitrate / 1000).toFixed(1)} Mbps`);
-  }
-
-  if (props.videoCodec) {
-    chips.push(props.videoCodec.toUpperCase());
-  }
-
-  if (props.audioCodec) {
-    const audio = props.audioChannels
-      ? `${props.audioCodec.toUpperCase()} ${props.audioChannels}`
-      : props.audioCodec.toUpperCase();
-    chips.push(audio.trim());
-  }
-
-  if (props.hdr) {
-    chips.push(props.hdr);
-  }
-
-  return chips;
-}
+export type { TechnicalChipsProps } from "../utils/technicalChipsUtils";
 
 export function TechnicalChips(props: TechnicalChipsProps) {
   const chips = buildChips(props);
@@ -52,12 +15,13 @@ export function TechnicalChips(props: TechnicalChipsProps) {
   if (chips.length === 0) return null;
 
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+    <div style={{ display: "flex", flexWrap: "wrap", margin: "0 -6px -6px 0" }}>
       {chips.map((chip) => (
         <span
           key={chip}
           style={{
             display: "inline-block",
+            margin: "0 6px 6px 0",
             padding: "8px 18px",
             borderRadius: 12,
             background: "rgba(255,255,255,0.12)",

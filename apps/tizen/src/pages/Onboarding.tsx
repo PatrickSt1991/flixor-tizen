@@ -233,8 +233,7 @@ const toggleStyles = {
     cursor: "default",
   } as React.CSSProperties,
   labelBlock: {
-    display: "flex",
-    flexDirection: "column" as const,
+    display: "grid",
     gap: 4,
     flex: 1,
   } as React.CSSProperties,
@@ -539,7 +538,9 @@ const pageStyles = {
     flex: 1,
   } as React.CSSProperties,
   dots: {
-    display: "flex",
+    display: "grid",
+    gridAutoFlow: "column",
+    justifyContent: "start",
     gap: 12,
     marginBottom: 32,
   } as React.CSSProperties,
@@ -556,7 +557,9 @@ const pageStyles = {
     boxShadow: "0 0 8px rgba(229,9,20,0.5)",
   } as React.CSSProperties,
   actions: {
-    display: "flex",
+    display: "grid",
+    gridAutoFlow: "column",
+    justifyContent: "center",
     gap: 20,
     paddingBottom: 60,
   } as React.CSSProperties,
@@ -589,8 +592,7 @@ const slideStyles = {
     maxWidth: 600,
   } as React.CSSProperties,
   toggleGroup: {
-    display: "flex",
-    flexDirection: "column" as const,
+    display: "grid",
     gap: 16,
     width: "100%",
     maxWidth: 560,

@@ -239,8 +239,8 @@ export function HomeHero({ item, onPlay, onMoreInfo }: HomeHeroProps) {
             right: 0,
             bottom: 0,
             padding: "24px 48px",
-            display: "flex",
-            flexDirection: "column",
+            display: "grid",
+            justifyItems: "start",
             gap: 10,
           }}
         >
@@ -275,7 +275,7 @@ export function HomeHero({ item, onPlay, onMoreInfo }: HomeHeroProps) {
           )}
 
           {/* Meta badges */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "grid", gridAutoFlow: "column", justifyContent: "start", alignItems: "center", gap: 8 }}>
             {item.year && (
               <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 14 }}>
                 {item.year}
@@ -321,12 +321,13 @@ export function HomeHero({ item, onPlay, onMoreInfo }: HomeHeroProps) {
           )}
 
           {/* Action buttons */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 4 }}>
+          <div style={{ display: "grid", gridAutoFlow: "column", justifyContent: "start", alignItems: "center", gap: 12, marginTop: 4 }}>
             <button
               ref={playRef}
               onClick={() => onPlay?.()}
               style={{
-                display: "inline-flex",
+                display: "inline-grid",
+                gridAutoFlow: "column",
                 alignItems: "center",
                 gap: 8,
                 padding: "10px 28px",
@@ -352,7 +353,8 @@ export function HomeHero({ item, onPlay, onMoreInfo }: HomeHeroProps) {
               ref={infoRef}
               onClick={() => onMoreInfo?.()}
               style={{
-                display: "inline-flex",
+                display: "inline-grid",
+                gridAutoFlow: "column",
                 alignItems: "center",
                 gap: 8,
                 padding: "10px 28px",

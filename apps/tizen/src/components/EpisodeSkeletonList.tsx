@@ -16,14 +16,15 @@ export function EpisodeSkeletonList({ count = 6 }: EpisodeSkeletonListProps) {
   if (count <= 0) return null;
 
   return (
-    <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
           style={{
-            display: "flex",
+            display: "grid",
+            gridTemplateColumns: "32px 176px 1fr",
             gap: 16,
-            alignItems: "flex-start",
+            alignItems: "start",
             padding: "8px 0",
           }}
         >
@@ -50,7 +51,7 @@ export function EpisodeSkeletonList({ count = 6 }: EpisodeSkeletonListProps) {
           />
 
           {/* Title + overview placeholders */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "grid", gap: 8, alignContent: "start" }}>
             <div
               className="skeleton"
               style={{ height: 16, width: "40%", borderRadius: 4 }}

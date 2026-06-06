@@ -2,6 +2,84 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import legacy from '@vitejs/plugin-legacy'
+import type { Plugin as PostcssPlugin, Rule as PostcssRule } from 'postcss'
+
+/**
+ * Tizen WebViews predate `gap` in FLEXBOX (Chrome 84) — it is silently
+ * ignored and every flex layout collapses together. Grid gap works since
+ * Chrome 57, so grid rules are left alone. This plugin REPLACES flex gap
+ * with child-margin rules, which render identically on every engine from
+ * Chrome 47 to current — no @supports gymnastics, no double spacing.
+ *
+ *   row (default):        .sel > * + * { margin-left: <gap> }
+ *   flex-direction:column .sel > * + * { margin-top: <gap> }
+ *   flex-wrap:wrap        .sel > *     { margin: 0 <gap> <gap> 0 }
+ */
+function tizenFlexGapFallback(): PostcssPlugin {
+  return {
+    postcssPlugin: 'tizen-flex-gap-fallback',
+    OnceExit(root, { Rule, Declaration }) {
+      root.walkRules((rule) => {
+        if (!rule.selector || rule.selector.includes('>')) return
+        let display: string | undefined
+        let gap: string | undefined
+        let rowGap: string | undefined
+        let colGap: string | undefined
+        let column = false
+        let wrap = false
+        rule.walkDecls((d) => {
+          if (d.prop === 'display') display = d.value
+          else if (d.prop === 'gap') gap = d.value
+          else if (d.prop === 'row-gap') rowGap = d.value
+          else if (d.prop === 'column-gap') colGap = d.value
+          else if (d.prop === 'flex-direction' && d.value.includes('column')) column = true
+          else if (d.prop === 'flex-wrap' && d.value.includes('wrap')) wrap = true
+        })
+        if (!gap && !rowGap && !colGap) return
+        if (!display || !/flex/.test(display)) return // grid keeps gap (Chrome 57+)
+        const parts = (gap || '').trim().split(/\s+/)
+        const rg = rowGap || parts[0]
+        const cg = colGap || parts[1] || parts[0]
+        rule.walkDecls((d) => {
+          if (d.prop === 'gap' || d.prop === 'row-gap' || d.prop === 'column-gap') d.remove()
+        })
+        const childRule: PostcssRule = new Rule({
+          selector: rule.selectors.map((s) => (wrap ? `${s} > *` : `${s} > * + *`)).join(',\n'),
+        })
+        if (wrap) {
+          childRule.append(new Declaration({ prop: 'margin', value: `0 ${cg} ${rg} 0` }))
+        } else {
+          childRule.append(
+            new Declaration({ prop: column ? 'margin-top' : 'margin-left', value: column ? rg : cg })
+          )
+        }
+        rule.after(childRule)
+      })
+    },
+  }
+}
+
+/**
+ * `inset` shorthand is Chrome 87+ — older WebViews drop the declaration and
+ * fixed/absolute overlays land in the wrong place. Expand to longhands.
+ */
+function tizenInsetLonghand(): PostcssPlugin {
+  return {
+    postcssPlugin: 'tizen-inset-longhand',
+    Declaration: {
+      inset(decl, { Declaration }) {
+        const v = decl.value.trim().split(/\s+/)
+        const [top, right = v[0], bottom = v[0], left = right] = v
+        decl.replaceWith(
+          new Declaration({ prop: 'top', value: top }),
+          new Declaration({ prop: 'right', value: right }),
+          new Declaration({ prop: 'bottom', value: bottom }),
+          new Declaration({ prop: 'left', value: left })
+        )
+      },
+    },
+  }
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -53,6 +131,11 @@ export default defineConfig({
     },
   ],
   base: './',
+  css: {
+    postcss: {
+      plugins: [tizenFlexGapFallback(), tizenInsetLonghand()],
+    },
+  },
   build: {
     target: ['chrome63'],
     modulePreload: false,

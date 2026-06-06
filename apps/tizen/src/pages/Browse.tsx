@@ -330,7 +330,9 @@ export function BrowsePage() {
 
         <div
           style={{
-            display: "flex",
+            display: "grid",
+            gridAutoFlow: "column",
+            justifyContent: "start",
             alignItems: "center",
             gap: "16px",
             margin: "20px 80px 0",
