@@ -220,7 +220,7 @@ export function DetailsPage() {
             art: buildImageUrl(tmdbData.backdrop_path, "backdrop"),
             duration: (runtime || 0) * 60000,
             Guid: [{ id: `tmdb://${id}` }],
-            contentRating: (tmdbData as { adult?: boolean }).adult ? "R" : "PG-13",
+            contentRating: (tmdbData as any).adult ? "R" : "PG-13",
           } as PlexMediaItem;
         } else {
           const plexData = await flixor.plexServer.getMetadata(ratingKey);

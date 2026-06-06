@@ -111,17 +111,9 @@ describe("SearchPage", () => {
 
   it("shows Trakt popular when authenticated", async () => {
     mockTraktIsAuth.mockReturnValue(true);
-    // getTrending is called once for "movies" and once for "shows"; each
-    // call must resolve to the matching entry shape ({movie} vs {show}).
-    mockTraktGetTrending.mockImplementation((type: unknown) =>
-      type === "movies"
-        ? Promise.resolve([
-            { movie: { title: "Trakt Movie", ids: { tmdb: 1, trakt: 1 }, year: 2024 } },
-          ])
-        : Promise.resolve([
-            { show: { title: "Trakt Show", ids: { tmdb: 2, trakt: 2 }, year: 2024 } },
-          ])
-    );
+    mockTraktGetTrending.mockResolvedValue([
+      { movie: { title: "Trakt Movie", ids: { tmdb: 1, trakt: 1 }, year: 2024 } },
+    ]);
     await act(async () => {
       render(<SearchPage />);
     });
