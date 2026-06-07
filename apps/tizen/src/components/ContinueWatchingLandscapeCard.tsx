@@ -22,7 +22,7 @@ export function ContinueWatchingLandscapeCard({
     onEnterPress: () => onSelect(item.ratingKey),
     onFocus: () => {
       (ref.current as HTMLElement | null)?.scrollIntoView({
-        behavior: "smooth",
+        behavior: "auto",
         block: "nearest",
         inline: "center",
       });

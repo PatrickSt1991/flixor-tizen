@@ -34,7 +34,7 @@ function FocusableCard({
     onFocus: () => {
       onItemFocus?.(item);
       (ref.current as HTMLDivElement | null)?.scrollIntoView({
-        behavior: "smooth",
+        behavior: "auto",
         block: "nearest",
         inline: "center",
       });

@@ -208,7 +208,7 @@ describe("useTizenRemote", () => {
     await loadHook();
     fireKey(KEY.CHANNEL_UP);
     expect(scrollSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ behavior: "smooth" }),
+      expect.objectContaining({ behavior: "auto" }),
     );
     scrollSpy.mockRestore();
   });
@@ -218,7 +218,7 @@ describe("useTizenRemote", () => {
     await loadHook();
     fireKey(KEY.CHANNEL_DOWN);
     expect(scrollSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ behavior: "smooth" }),
+      expect.objectContaining({ behavior: "auto" }),
     );
     scrollSpy.mockRestore();
   });

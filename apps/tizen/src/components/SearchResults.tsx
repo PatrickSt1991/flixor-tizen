@@ -63,7 +63,7 @@ function ResultCard({
     onEnterPress: () => onSelect(item),
     onFocus: () => {
       (ref.current as HTMLElement | null)?.scrollIntoView({
-        behavior: "smooth",
+        behavior: "auto",
         block: "nearest",
         inline: "center",
       });

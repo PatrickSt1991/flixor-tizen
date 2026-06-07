@@ -367,7 +367,7 @@ export function Home() {
     const target = e.target as HTMLElement;
     if (target.closest(".hero-section")) {
       const container = document.querySelector(".tv-container");
-      if (container) container.scrollTo({ top: 0, behavior: "smooth" });
+      if (container) container.scrollTo({ top: 0, behavior: "auto" });
     }
   };
 

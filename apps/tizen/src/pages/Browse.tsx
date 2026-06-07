@@ -313,7 +313,7 @@ export function BrowsePage() {
   const handleFocus = (e: React.FocusEvent) => {
     const target = e.target as HTMLElement;
     target.scrollIntoView({
-      behavior: "smooth",
+      behavior: "auto",
       block: "center",
       inline: "center",
     });

@@ -161,13 +161,13 @@ export function useTizenRemote() {
       // ── Channel Up/Down — section jump on scrollable pages ─────
       if (keyCode === KEY.CHANNEL_UP) {
         e.preventDefault();
-        window.scrollBy({ top: -window.innerHeight * 0.8, behavior: 'smooth' });
+        window.scrollBy({ top: -window.innerHeight * 0.8, behavior: 'auto' });
         return;
       }
 
       if (keyCode === KEY.CHANNEL_DOWN) {
         e.preventDefault();
-        window.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' });
+        window.scrollBy({ top: window.innerHeight * 0.8, behavior: 'auto' });
         return;
       }
 

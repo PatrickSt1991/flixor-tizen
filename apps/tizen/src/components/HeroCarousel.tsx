@@ -23,7 +23,10 @@ export function HeroCarousel({ items, onBackdropChange }: HeroCarouselProps) {
     trackChildren: true,
   });
 
-  const { ref: playRef, focusSelf: focusPlay } = useFocusable({
+  // `focused` must be rendered as a class: norigin's spatial focus is
+  // virtual (no element.focus()), so the :focus styles never apply on TV
+  // and the initially-focused Play button looked like nothing had focus.
+  const { ref: playRef, focused: playFocused, focusSelf: focusPlay } = useFocusable({
     onFocus: () => {
       setPaused(true);
       emitBackdropForCurrent();
@@ -31,7 +34,7 @@ export function HeroCarousel({ items, onBackdropChange }: HeroCarouselProps) {
     onBlur: () => setPaused(false),
   });
 
-  const { ref: infoRef } = useFocusable({
+  const { ref: infoRef, focused: infoFocused } = useFocusable({
     onFocus: () => {
       setPaused(true);
       emitBackdropForCurrent();
@@ -174,7 +177,7 @@ export function HeroCarousel({ items, onBackdropChange }: HeroCarouselProps) {
           <div className="hero-actions">
             <button
               ref={playRef}
-              className="btn-primary"
+              className={`btn-primary${playFocused ? " focused" : ""}`}
               onClick={() => {
                 const part = currentItem.Media?.[0]?.Part?.[0];
                 if (part) navigate(`/player/${currentItem.ratingKey}`);
@@ -184,7 +187,7 @@ export function HeroCarousel({ items, onBackdropChange }: HeroCarouselProps) {
             </button>
             <button
               ref={infoRef}
-              className="btn-secondary"
+              className={`btn-secondary${infoFocused ? " focused" : ""}`}
               onClick={() => navigate(`/details/${currentItem.ratingKey}`)}
             >
               More Info
