@@ -137,6 +137,9 @@ export function VirtualGrid<T extends VirtualGridItem>({
   const { ref: focusRef, focusKey } = useFocusable({
     trackChildren: true,
     isFocusBoundary: true,
+    // Trap only left/right (edge columns); up/down may leave the grid
+    // toward the filter bar / nav.
+    focusBoundaryDirections: ["left", "right"],
   });
   // Alias for the InfiniteSentinel rootRef below; effects read focusRef.current
   // directly so the deps linter recognizes it as a ref.

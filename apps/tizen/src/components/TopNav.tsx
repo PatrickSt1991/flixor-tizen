@@ -40,7 +40,9 @@ export function TopNav() {
   const { ref: navRef } = useFocusable({
     focusKey: "top-nav",
     trackChildren: true,
-    isFocusBoundary: false,
+    // Left/right cycle the menu only; Down leaves toward the page content.
+    isFocusBoundary: true,
+    focusBoundaryDirections: ["left", "right"],
   });
 
   useEffect(() => {
