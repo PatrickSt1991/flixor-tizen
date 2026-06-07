@@ -1,6 +1,7 @@
 import type { PlexMediaItem } from "@flixor/core";
 import { useFocusable } from "@noriginmedia/norigin-spatial-navigation";
 import { SmartImage } from "./SmartImage";
+import { scrollFocusedIntoView } from "../utils/tvScroll";
 import { flixor } from "../services/flixor";
 import { formatResumeLabel } from "../utils/media";
 
@@ -15,6 +16,9 @@ export function ContinueWatchingPosterCard({
 }: ContinueWatchingPosterCardProps) {
   const { ref, focused } = useFocusable({
     onEnterPress: () => onSelect(item.ratingKey),
+    onFocus: () => {
+      scrollFocusedIntoView(ref.current as HTMLElement | null);
+    },
   });
 
   const thumb = item.thumb || item.art;

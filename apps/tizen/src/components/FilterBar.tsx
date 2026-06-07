@@ -45,7 +45,11 @@ export function FilterBar({
   onSelect,
   allowDeselect = true,
 }: FilterBarProps) {
-  const { ref, focusKey } = useFocusable();
+  const { ref, focusKey } = useFocusable({
+    trackChildren: true,
+    isFocusBoundary: true,
+    focusBoundaryDirections: ["left", "right"],
+  });
 
   const handleSelect = (id: string) => {
     if (allowDeselect && activeId === id) {

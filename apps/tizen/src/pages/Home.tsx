@@ -7,6 +7,22 @@ import {
 } from "@noriginmedia/norigin-spatial-navigation";
 import { flixor } from "../services/flixor";
 import { loadSettings } from "../services/settings";
+import { useFocusable as useRowFocusable } from "@noriginmedia/norigin-spatial-navigation";
+
+function BoundedRow({ children }: { children: React.ReactNode }) {
+  const { ref, focusKey } = useRowFocusable({
+    trackChildren: true,
+    isFocusBoundary: true,
+    focusBoundaryDirections: ["left", "right"],
+  });
+  return (
+    <FocusContext.Provider value={focusKey}>
+      <div ref={ref} className="tv-row content-row-scroll">
+        {children}
+      </div>
+    </FocusContext.Provider>
+  );
+}
 import * as tmdbService from "../services/tmdb";
 import { getWatchlist as getPlexWatchlist } from "../services/plextv";
 import type { PlexMediaItem, TMDBMedia } from "@flixor/core";
@@ -500,7 +516,7 @@ export function Home() {
                 <div className="content-row-header">
                   <h2 className="row-title">Continue Watching</h2>
                 </div>
-                <div className="tv-row content-row-scroll">
+                <BoundedRow>
                   {continueWatchingItems.map((item) => (
                     <CardComponent
                       key={item.ratingKey}
@@ -508,7 +524,7 @@ export function Home() {
                       onSelect={(ratingKey) => navigate(`/player/${ratingKey}`)}
                     />
                   ))}
-                </div>
+                </BoundedRow>
               </section>
             );
           })()}
@@ -544,6 +560,11 @@ export function Home() {
             />
           </>
         )}
+
+        {/* Scroll headroom so the LAST row can also center on screen when
+            focused — without it the page runs out of scroll and the final
+            row stays pinned (clipped) at the bottom edge. */}
+        <div style={{ height: "40vh" }} aria-hidden="true" />
       </div>
     </FocusContext.Provider>
   );

@@ -3,6 +3,7 @@ import {
   FocusContext,
 } from "@noriginmedia/norigin-spatial-navigation";
 import type { SearchResult } from "../types";
+import { scrollFocusedIntoView } from "../utils/tvScroll";
 
 interface SearchResultsProps {
   results: SearchResult[];
@@ -62,11 +63,7 @@ function ResultCard({
   const { ref, focused } = useFocusable({
     onEnterPress: () => onSelect(item),
     onFocus: () => {
-      (ref.current as HTMLElement | null)?.scrollIntoView({
-        behavior: "auto",
-        block: "center",
-        inline: "center",
-      });
+      scrollFocusedIntoView(ref.current as HTMLElement | null);
     },
   });
 

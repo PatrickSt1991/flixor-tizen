@@ -159,9 +159,12 @@ input:focus,
   align-items: center;
   gap: 60px;
   z-index: 100;
+  /* Strong enough that page content scrolled underneath (hero buttons/text)
+     doesn't visually collide with the menu items. */
   background: linear-gradient(
     to bottom,
-    rgba(0, 0, 0, 0.7) 0%,
+    rgba(0, 0, 0, 0.92) 0%,
+    rgba(0, 0, 0, 0.75) 55%,
     transparent 100%
   );
 }

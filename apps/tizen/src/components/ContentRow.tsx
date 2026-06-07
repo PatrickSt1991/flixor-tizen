@@ -5,6 +5,7 @@ import {
   FocusContext,
 } from "@noriginmedia/norigin-spatial-navigation";
 import { MediaCard } from "./MediaCard";
+import { scrollFocusedIntoView } from "../utils/tvScroll";
 import type { PlexMediaItem } from "@flixor/core";
 
 type CardVariant = "landscape" | "poster" | "continue";
@@ -33,11 +34,7 @@ function FocusableCard({
     onEnterPress: () => onItemClick(item),
     onFocus: () => {
       onItemFocus?.(item);
-      (ref.current as HTMLDivElement | null)?.scrollIntoView({
-        behavior: "auto",
-        block: "center", // center the row so the next row peeks from below
-        inline: "center",
-      });
+      scrollFocusedIntoView(ref.current as HTMLElement | null);
     },
   });
 
@@ -68,6 +65,10 @@ export function ContentRow({
 
   const { ref, focusKey } = useFocusable({
     trackChildren: true,
+    // Left/right stay inside this row; at the row's ends nothing happens.
+    // Up/down pass through to the neighboring sections.
+    isFocusBoundary: true,
+    focusBoundaryDirections: ["left", "right"],
   });
 
   const handleSeeAll = useCallback(() => {

@@ -1,6 +1,7 @@
 import type { PlexMediaItem } from "@flixor/core";
 import { useFocusable } from "@noriginmedia/norigin-spatial-navigation";
 import { SmartImage } from "./SmartImage";
+import { scrollFocusedIntoView } from "../utils/tvScroll";
 import { flixor } from "../services/flixor";
 import { formatResumeLabel } from "../utils/media";
 
@@ -21,11 +22,7 @@ export function ContinueWatchingLandscapeCard({
   const { ref, focused } = useFocusable({
     onEnterPress: () => onSelect(item.ratingKey),
     onFocus: () => {
-      (ref.current as HTMLElement | null)?.scrollIntoView({
-        behavior: "auto",
-        block: "center", // center the row so the next row peeks from below
-        inline: "center",
-      });
+      scrollFocusedIntoView(ref.current as HTMLElement | null);
     },
   });
 
