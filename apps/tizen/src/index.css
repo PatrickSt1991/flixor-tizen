@@ -312,8 +312,12 @@ input:focus,
   backdrop-filter: blur(20px);
 }
 
+/* .focused variants: norigin spatial navigation is a VIRTUAL focus system —
+   it never calls element.focus(), so :focus alone is invisible on TV. */
 .btn-primary:focus,
-.btn-secondary:focus {
+.btn-secondary:focus,
+.btn-primary.focused,
+.btn-secondary.focused {
   transform: scale(1.15);
   box-shadow: 0 0 0 5px #e50914;
   outline: none;
@@ -997,20 +1001,21 @@ input:focus,
 
 .trending-card {
   position: relative;
-  /* 16/9 via padding hack — aspect-ratio is Chrome 88+ */
+  /* 16/9 via padding hack — aspect-ratio is Chrome 88+. Single shorthand:
+     a separate `padding: 0` later in the rule would reset padding-top. */
   height: 0;
-  padding-top: 56.25%;
+  padding: 56.25% 0 0;
   border-radius: 12px;
   overflow: hidden;
   background: #222;
   border: 3px solid transparent;
   cursor: pointer;
-  padding: 0;
   text-align: left;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.trending-card:focus {
+.trending-card:focus,
+.trending-card.focused {
   transform: scale(1.08);
   border-color: #ff4b2b;
   box-shadow: 0 0 0 4px rgba(255, 75, 43, 0.6);
@@ -1056,15 +1061,15 @@ input:focus,
 
 .search-result-card {
   position: relative;
-  /* 2/3 via padding hack — aspect-ratio is Chrome 88+ */
+  /* 2/3 via padding hack — aspect-ratio is Chrome 88+. Single shorthand:
+     a separate `padding: 0` later in the rule would reset padding-top. */
   height: 0;
-  padding-top: 150%;
+  padding: 150% 0 0;
   border-radius: 12px;
   overflow: hidden;
   background: #1a1a1a;
   border: 3px solid transparent;
   cursor: pointer;
-  padding: 0;
   text-align: left;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
@@ -2815,4 +2820,101 @@ body.performance-mode * {
   box-shadow: none !important;
   text-shadow: none !important;
   animation-duration: 0.001s !important;
+}
+
+
+/* ── Search page: Popular Searches + Trending ──────────────────────────
+   These components shipped upstream without any styles — the classes
+   below never existed in this file, which is why the Search screen
+   rendered as unstyled cramped text. TV-safe: no flex gap (child
+   margins), no aspect-ratio (the .trending-card padding hack provides
+   the 16/9 shape; children are absolutely positioned). */
+
+.popular-searches-section {
+  padding: 0 80px;
+  margin-bottom: 40px;
+}
+
+.popular-searches-title,
+.trending-searches-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 20px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.popular-searches-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -12px -12px 0;
+}
+
+.popular-search-pill {
+  margin: 0 12px 12px 0;
+  padding: 12px 26px;
+  font-size: 20px;
+  font-weight: 600;
+  font-family: inherit;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  cursor: pointer;
+  outline: none;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.popular-search-pill:focus,
+.popular-search-pill.focused {
+  border-color: #ff4b2b;
+  background: rgba(255, 75, 43, 0.25);
+  transform: scale(1.08);
+}
+
+.popular-search-pill.skeleton {
+  width: 150px;
+  height: 50px;
+}
+
+.trending-searches-section {
+  padding: 0 80px;
+  margin-bottom: 60px;
+}
+
+.trending-searches-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 24px;
+}
+
+/* .trending-card carries the 16/9 padding hack (height:0 + padding-top),
+   so everything inside must be absolutely positioned. */
+.trending-card .smart-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.trending-card .smart-image .smart-image__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.trending-card__title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 14px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  text-align: left;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
