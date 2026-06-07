@@ -23,7 +23,7 @@ export function ContinueWatchingLandscapeCard({
     onFocus: () => {
       (ref.current as HTMLElement | null)?.scrollIntoView({
         behavior: "auto",
-        block: "nearest",
+        block: "center", // center the row so the next row peeks from below
         inline: "center",
       });
     },

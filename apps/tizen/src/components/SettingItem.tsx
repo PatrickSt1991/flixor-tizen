@@ -1,6 +1,16 @@
 import { useCallback } from "react";
 import { useFocusable } from "@noriginmedia/norigin-spatial-navigation";
 
+/** Scroll the focused settings row into view — the page has no other
+ *  focus-follow scrolling, so rows below the fold were unreachable
+ *  visually. (behavior:"smooth" is a no-op on Tizen WebViews.) */
+function scrollRowIntoView(ref: React.RefObject<unknown>) {
+  (ref.current as HTMLElement | null)?.scrollIntoView({
+    behavior: "auto",
+    block: "center",
+  });
+}
+
 export interface SettingItemToggle {
   type: "toggle";
   checked: boolean;
@@ -105,7 +115,10 @@ function ToggleRow({
     if (!disabled) onChange(!checked);
   }, [checked, onChange, disabled]);
 
-  const { ref, focused } = useFocusable({ onEnterPress: handlePress });
+  const { ref, focused } = useFocusable({
+    onEnterPress: handlePress,
+    onFocus: () => scrollRowIntoView(ref),
+  });
 
   return (
     <button
@@ -142,7 +155,9 @@ function TextInputRow({
   onChange: (v: string) => void;
   disabled?: boolean;
 }) {
-  const { ref, focused } = useFocusable();
+  const { ref, focused } = useFocusable({
+    onFocus: () => scrollRowIntoView(ref),
+  });
 
   return (
     <div
@@ -186,7 +201,10 @@ function SelectRow({
     onChange(options[(idx + 1) % options.length]);
   }, [value, options, onChange, disabled]);
 
-  const { ref, focused } = useFocusable({ onEnterPress: cycleNext });
+  const { ref, focused } = useFocusable({
+    onEnterPress: cycleNext,
+    onFocus: () => scrollRowIntoView(ref),
+  });
 
   return (
     <button
@@ -222,7 +240,10 @@ function ButtonRow({
     if (!disabled) onPress();
   }, [onPress, disabled]);
 
-  const { ref, focused } = useFocusable({ onEnterPress: handlePress });
+  const { ref, focused } = useFocusable({
+    onEnterPress: handlePress,
+    onFocus: () => scrollRowIntoView(ref),
+  });
 
   return (
     <button
