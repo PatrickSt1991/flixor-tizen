@@ -204,6 +204,15 @@ export function SettingsPage() {
               label="Switch Profile"
               control={{ type: "button", buttonLabel: "Select ›", onPress: () => navigate("/profile-select") }}
             />
+            <SettingItem
+              label="Ask for profile at startup"
+              description="Show Who's Watching (and PIN) on every launch instead of restoring the last profile"
+              control={{
+                type: "toggle",
+                checked: !!settings.alwaysAskProfile,
+                onChange: (v) => updateSetting("alwaysAskProfile", v),
+              }}
+            />
           </SettingsCard>
 
           {/* Trakt Integration */}

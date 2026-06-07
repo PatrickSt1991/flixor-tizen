@@ -83,7 +83,13 @@ function AppRoutes() {
     // Step 4: Profile selection
     try {
       const users = await flixor.getHomeUsers();
-      if (users.length > 1) {
+      // Auto-login: a PIN-verified profile is persisted by the core and
+      // restored during initialize() — only show "Who's Watching" when no
+      // profile was restored (or the user opted to always be asked).
+      if (
+        users.length > 1 &&
+        (settings.alwaysAskProfile || !flixor.currentProfile)
+      ) {
         setPhase("profile-select");
         navigate("/profile-select", { replace: true });
         return;
