@@ -6,6 +6,42 @@ import {
 } from "@noriginmedia/norigin-spatial-navigation";
 import { flixor } from "../services/flixor";
 import { loadSettings } from "../services/settings";
+
+/** Search field that only opens the on-screen keyboard when the user
+ *  presses OK on it. A bare <input autoFocus> kept NATIVE focus while
+ *  spatial focus was on a card — OK anywhere opened the Samsung IME. */
+function LibrarySearchInput({
+  value,
+  placeholder,
+  onChange,
+}: {
+  value: string;
+  placeholder: string;
+  onChange: (v: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { ref, focused } = useFocusable({
+    onEnterPress: () => inputRef.current?.focus(),
+  });
+
+  // Leaving the field with the D-pad must close the IME / drop native focus
+  useEffect(() => {
+    if (!focused) inputRef.current?.blur();
+  }, [focused]);
+
+  return (
+    <div ref={ref}>
+      <input
+        ref={inputRef}
+        type="text"
+        className={`search-input library-search${focused ? " spatial-focused" : ""}`}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
 import type { PlexMediaItem } from "@flixor/core";
 import { TopNav } from "../components/TopNav";
 import { PosterCard } from "../components/PosterCard";
@@ -149,13 +185,10 @@ export function LibraryPage() {
         </h1>
 
         <div className="library-filters">
-          <input
-            type="text"
-            className="search-input library-search"
+          <LibrarySearchInput
             placeholder={`Search ${type === "movie" ? "movies" : "shows"}...`}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            autoFocus
+            onChange={setSearchQuery}
           />
           {genreFilterOptions.length > 0 && (
             <FilterBar

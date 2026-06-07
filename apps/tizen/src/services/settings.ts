@@ -4,6 +4,9 @@ export interface TizenSettings {
 
   // Onboarding
   onboardingCompleted?: boolean;
+  /** Show "Who's Watching" (and PIN) on every launch instead of restoring
+   *  the last profile from storage. */
+  alwaysAskProfile?: boolean;
 
   // Home screen
   showHeroSection?: boolean;
@@ -102,6 +105,7 @@ export interface TizenSettings {
 
 export const DEFAULT_SETTINGS: TizenSettings = {
   onboardingCompleted: false,
+  alwaysAskProfile: false,
   showHeroSection: true,
   showRecentlyAddedRows: true,
   showCollectionsRow: true,

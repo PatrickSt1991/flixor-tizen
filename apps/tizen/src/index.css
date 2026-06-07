@@ -338,8 +338,14 @@ input:focus,
   display: flex;
   gap: 25px;
   padding: 20px 0;
-  overflow-x: visible;
-  overflow-y: visible;
+  /* The row must be its own horizontal scroller: with visible overflow,
+     scrollIntoView(inline:center) scrolled the PAGE container sideways
+     (hidden overflow is still programmatically scrollable), shifting the
+     entire layout and confusing spatial-nav geometry. Chrome 63 verified:
+     two-axis scrollIntoView scrolls the row horizontally and the page
+     vertically when the row is the horizontal scroller. */
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .tv-row::-webkit-scrollbar {
