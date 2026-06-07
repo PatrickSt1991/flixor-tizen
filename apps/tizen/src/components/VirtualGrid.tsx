@@ -114,7 +114,7 @@ function InfiniteSentinel({
 
 export function VirtualGrid<T extends VirtualGridItem>({
   items,
-  rowHeight = 360,
+  rowHeight = 420, // poster (360) + title label below it
   columnWidth = 240,
   gap = 25,
   overscan = 5,

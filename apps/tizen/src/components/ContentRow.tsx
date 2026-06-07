@@ -35,7 +35,7 @@ function FocusableCard({
       onItemFocus?.(item);
       (ref.current as HTMLDivElement | null)?.scrollIntoView({
         behavior: "auto",
-        block: "nearest",
+        block: "center", // center the row so the next row peeks from below
         inline: "center",
       });
     },

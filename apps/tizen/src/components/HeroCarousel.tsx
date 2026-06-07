@@ -21,12 +21,17 @@ export function HeroCarousel({ items, onBackdropChange }: HeroCarouselProps) {
   const { ref: sectionRef, focusKey } = useFocusable({
     focusKey: "hero-carousel",
     trackChildren: true,
+    // Keep left/right inside the hero (Play <-> More Info); without this,
+    // right-arrow walked diagonally up into the top nav. Up/down pass through.
+    isFocusBoundary: true,
+    focusBoundaryDirections: ["left", "right"],
   });
 
   // `focused` must be rendered as a class: norigin's spatial focus is
   // virtual (no element.focus()), so the :focus styles never apply on TV
   // and the initially-focused Play button looked like nothing had focus.
   const { ref: playRef, focused: playFocused, focusSelf: focusPlay } = useFocusable({
+    focusKey: "hero-play",
     onFocus: () => {
       setPaused(true);
       emitBackdropForCurrent();

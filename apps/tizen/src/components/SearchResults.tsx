@@ -64,7 +64,7 @@ function ResultCard({
     onFocus: () => {
       (ref.current as HTMLElement | null)?.scrollIntoView({
         behavior: "auto",
-        block: "nearest",
+        block: "center",
         inline: "center",
       });
     },

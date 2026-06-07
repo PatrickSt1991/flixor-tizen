@@ -342,7 +342,10 @@ export function Home() {
   useEffect(() => {
     if (!loading) {
       const timer = setTimeout(() => {
-        setFocus("hero-carousel");
+        // Focus the Play button itself — focusing the "hero-carousel"
+        // container puts norigin focus on the section node, which has no
+        // visual, so the start screen looked like nothing was focused.
+        setFocus("hero-play");
       }, 150);
       return () => clearTimeout(timer);
     }
