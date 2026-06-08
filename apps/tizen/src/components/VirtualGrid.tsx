@@ -28,6 +28,7 @@ export interface VirtualGridProps<T extends VirtualGridItem> {
 }
 
 import { computeLayout } from "../utils/virtualGridUtils";
+import { scrollFocusedIntoView } from "../utils/tvScroll";
 
 function FocusableGridItem<T extends VirtualGridItem>({
   item,
@@ -40,26 +41,11 @@ function FocusableGridItem<T extends VirtualGridItem>({
 }) {
   const { ref, focused } = useFocusable({
     focusKey: `virtual-grid-item-${item.id}`,
-    onFocus: () => {
-      const el = ref.current;
-      const container = el?.closest(".virtual-grid-container");
-      if (el && container) {
-        const rect = el.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-
-        if (rect.bottom > containerRect.bottom - 40) {
-          container.scrollBy({
-            top: rect.bottom - containerRect.bottom + 100,
-            behavior: "auto",
-          });
-        } else if (rect.top < containerRect.top + 40) {
-          container.scrollBy({
-            top: rect.top - containerRect.top - 100,
-            behavior: "auto",
-          });
-        }
-      }
-    },
+    // Same deterministic centring as the rows. The old edge-triggered
+    // scrollBy lagged a keypress behind (it measured stale rects against
+    // the virtualized container) — the symptom was "press down, focus
+    // moves but the grid doesn't scroll until you press up again".
+    onFocus: () => scrollFocusedIntoView(ref.current as HTMLElement | null),
   });
 
   return (
