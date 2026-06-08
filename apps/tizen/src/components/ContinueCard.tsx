@@ -3,6 +3,7 @@ import { useFocusable } from "@noriginmedia/norigin-spatial-navigation";
 import { SmartImage } from "./SmartImage";
 import { flixor } from "../services/flixor";
 import { formatResumeLabel } from "../utils/media";
+import { scrollFocusedIntoView } from "../utils/tvScroll";
 
 export function ContinueCard({
   item,
@@ -15,7 +16,10 @@ export function ContinueCard({
 }) {
   const { ref, focused } = useFocusable({
     onEnterPress: () => onClick(),
-    onFocus: () => onFocus?.(),
+    onFocus: () => {
+      scrollFocusedIntoView(ref.current as HTMLElement | null);
+      onFocus?.();
+    },
   });
 
   const thumb = item.thumb || item.art;
