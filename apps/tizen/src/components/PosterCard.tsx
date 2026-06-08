@@ -2,6 +2,7 @@ import type { PlexMediaItem } from "@flixor/core";
 import { useFocusable } from "@noriginmedia/norigin-spatial-navigation";
 import { SmartImage } from "./SmartImage";
 import { flixor } from "../services/flixor";
+import { scrollFocusedIntoView } from "../utils/tvScroll";
 
 export function PosterCard({
   item,
@@ -14,7 +15,13 @@ export function PosterCard({
 }) {
   const { ref, focused } = useFocusable({
     onEnterPress: () => onClick(),
-    onFocus: () => onFocus?.(),
+    // The card is the actual focus target (norigin focuses this leaf, not the
+    // grid/row wrapper) so it must scroll ITSELF into view — otherwise focus
+    // moves but nothing scrolls. See utils/tvScroll.
+    onFocus: () => {
+      scrollFocusedIntoView(ref.current as HTMLElement | null);
+      onFocus?.();
+    },
   });
 
   const thumb = item.grandparentThumb || item.parentThumb || item.thumb;
