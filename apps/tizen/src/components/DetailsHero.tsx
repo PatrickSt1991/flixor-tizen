@@ -93,7 +93,13 @@ export function DetailsHero({
             </div>
           )}
 
-          {children && <div className="hero-actions">{children}</div>}
+          {/* Metadata (genres, mood tags, chips, badges, ratings) and the
+              action-buttons row are passed as children. Stack them VERTICALLY
+              — they were previously dumped into a flex ROW (.hero-actions),
+              which crammed everything side-by-side and stretched the chip rows
+              into tall grey blocks. The action buttons keep their own
+              .hero-actions row inside this column. */}
+          {children && <div className="details-hero__meta">{children}</div>}
         </div>
       </div>
     </div>

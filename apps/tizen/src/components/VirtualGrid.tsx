@@ -29,6 +29,11 @@ export interface VirtualGridProps<T extends VirtualGridItem> {
 
 import { computeLayout } from "../utils/virtualGridUtils";
 
+// Padding inside the scroll container. A focused card scales 1.15 (+~18px/side
+// horizontally, +~27px vertically on a 240x360 poster); without room the edge
+// cards (first column / first row) get clipped by the container's overflow.
+const GRID_PAD = 36;
+
 function GridItem<T extends VirtualGridItem>({
   item,
   style,
@@ -128,8 +133,11 @@ export function VirtualGrid<T extends VirtualGridItem>({
     if (!el) return;
 
     const measure = () => {
-      setViewportHeight(el.clientHeight);
-      setContainerWidth(el.clientWidth);
+      // Subtract the scroll-room padding so columns fit the content box; the
+      // padding is the space a focus-scaled edge card grows into without being
+      // clipped by the container's overflow.
+      setViewportHeight(el.clientHeight - GRID_PAD * 2);
+      setContainerWidth(el.clientWidth - GRID_PAD * 2);
     };
     measure();
 
@@ -229,13 +237,14 @@ export function VirtualGrid<T extends VirtualGridItem>({
           height: "calc(100vh - 200px)",
           overflow: "auto",
           position: "relative",
+          // Scroll-room so focus-scaled edge cards aren't clipped (see GRID_PAD).
+          padding: GRID_PAD,
         }}
       >
         <div
           style={{
             position: "relative",
             height: layout.totalHeight,
-            margin: gap / 2,
           }}
         >
           {visibleItems.map(({ item, style, key }) => (
