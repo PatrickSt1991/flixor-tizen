@@ -3135,3 +3135,45 @@ body.performance-mode * {
   color: #ff4b2b;
   font-weight: 800;
 }
+
+/* ── Transcode/subtitle debug overlay (GREEN colour key in the player) ──── */
+.transcode-debug {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  right: 24px;
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.92);
+  border: 1px solid #ff4b2b;
+  border-radius: 10px;
+  padding: 18px 22px;
+  font-family: monospace;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #e5e5e5;
+}
+
+.transcode-debug-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ff4b2b;
+  margin-bottom: 10px;
+}
+
+.transcode-debug-row {
+  margin-bottom: 6px;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.transcode-debug-row b {
+  color: #fff;
+}
+
+.transcode-debug-body {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #9aa0a6;
+}

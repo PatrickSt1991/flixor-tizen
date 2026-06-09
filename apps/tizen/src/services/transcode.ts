@@ -22,6 +22,30 @@ export interface TranscodeSession {
 let activeSessionId: string | null = null;
 
 /**
+ * Snapshot of the most recent transcode attempt, for the on-device debug
+ * overlay (a real TV has no devtools). Captures exactly what we asked Plex for
+ * and what its decision said about subtitle burning.
+ */
+export interface TranscodeDebug {
+  audioStreamID?: string;
+  subtitleStreamID?: string;
+  /** The start.m3u8 URL the player actually loads. */
+  startUrl: string;
+  /** Decision request URL + response (status + truncated body w/ burn flags). */
+  decisionUrl: string;
+  decisionStatus: number;
+  decisionBody: string;
+  timestamp: number;
+}
+
+let lastTranscodeDebug: TranscodeDebug | null = null;
+
+/** Get the most recent transcode debug snapshot (null until first transcode). */
+export function getLastTranscodeDebug(): TranscodeDebug | null {
+  return lastTranscodeDebug;
+}
+
+/**
  * Start a new transcode session for the given media.
  * Calls the Plex decision API then initiates the transcode stream.
  */
@@ -42,7 +66,7 @@ export async function startTranscode(
   const sessionId = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
 
   // Make transcode decision so Plex knows which streams to use
-  await flixor.plexServer.makeTranscodeDecision(mediaKey, {
+  const decision = await flixor.plexServer.makeTranscodeDecision(mediaKey, {
     audioStreamID,
     subtitleStreamID,
     mediaIndex,
@@ -62,6 +86,18 @@ export async function startTranscode(
     mediaIndex,
     sessionId,
   });
+
+  // Snapshot for the on-device debug overlay. (decision may be undefined when
+  // mocked in tests.)
+  lastTranscodeDebug = {
+    audioStreamID,
+    subtitleStreamID,
+    startUrl: result.startUrl,
+    decisionUrl: decision?.url ?? "",
+    decisionStatus: decision?.status ?? 0,
+    decisionBody: decision?.body ?? "",
+    timestamp: Date.now(),
+  };
 
   // Start the transcode session on the server
   await flixor.plexServer.startTranscodeSession(result.startUrl);

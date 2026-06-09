@@ -8,6 +8,7 @@ import {
 import { flixor } from "../services/flixor";
 import { loadSettings, saveSettings } from "../services/settings";
 import { StatsHUD } from "../components/StatsHUD";
+import { TranscodeDebugOverlay } from "../components/TranscodeDebugOverlay";
 import { FocusableButton } from "../components/FocusableButton";
 import { TrackPicker } from "../components/TrackPicker";
 import { VersionPickerModal } from "../components/VersionPickerModal";
@@ -68,6 +69,10 @@ export function PlayerPage() {
   const [nextEpisode, setNextEpisode] = useState<PlexMediaItem | null>(null);
   const [showNextOverlay, setShowNextOverlay] = useState(false);
   const [showStatsHud, setShowStatsHud] = useState(() => loadSettings().statsHudEnabled ?? false);
+  // Transcode/subtitle debug panel — toggled by the GREEN colour key (404), or
+  // "g" in the emulator. Surfaces the decision response (burn vs ignore) since
+  // a real TV has no devtools.
+  const [showTranscodeDebug, setShowTranscodeDebug] = useState(false);
 
   // Seek slider state
   const [currentTime, setCurrentTime] = useState(0);
@@ -99,6 +104,10 @@ export function PlayerPage() {
       } else {
         lastInfoKeyTime.current = now;
       }
+    }
+    // GREEN colour button (Tizen keyCode 404) or "g" → transcode debug panel.
+    if (e.keyCode === 404 || e.key === "ColorF1Green" || e.key === "g") {
+      setShowTranscodeDebug((prev) => !prev);
     }
   }, []);
 
@@ -605,6 +614,9 @@ export function PlayerPage() {
 
       {/* Playback Stats HUD */}
       <StatsHUD videoRef={videoRef} item={item} visible={showStatsHud} playbackStrategy={playbackStrategy ?? undefined} />
+
+      {/* Transcode/subtitle debug panel (GREEN key / "g") */}
+      <TranscodeDebugOverlay visible={showTranscodeDebug} />
 
       {/* Next Episode Overlay — uses NextEpisodeCountdown component */}
       {showNextOverlay && nextEpisode && (
