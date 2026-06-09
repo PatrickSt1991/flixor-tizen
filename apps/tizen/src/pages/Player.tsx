@@ -1,8 +1,14 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import {
+  useFocusable,
+  FocusContext,
+  setFocus,
+} from "@noriginmedia/norigin-spatial-navigation";
 import { flixor } from "../services/flixor";
 import { loadSettings, saveSettings } from "../services/settings";
 import { StatsHUD } from "../components/StatsHUD";
+import { FocusableButton } from "../components/FocusableButton";
 import { TrackPicker } from "../components/TrackPicker";
 import { VersionPickerModal } from "../components/VersionPickerModal";
 import { NextEpisodeCountdown } from "../components/NextEpisodeCountdown";
@@ -42,6 +48,7 @@ export function PlayerPage() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [item, setItem] = useState<PlexMediaItem | null>(null);
   const [showControls, setShowControls] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [activeMarker, setActiveMarker] = useState<PlexMarker | null>(null);
   const [audioTracks, setAudioTracks] = useState<PlexStream[]>([]);
   const [subtitleTracks, setSubtitleTracks] = useState<PlexStream[]>([]);
@@ -343,18 +350,85 @@ export function PlayerPage() {
     return () => globalThis.clearInterval(interval);
   }, [ratingKey]);
 
-  const handleMouseMove = () => {
+  // Focus context for the on-screen controls (the overlay is the only way to
+  // reach Audio/Subtitle on a TV — there's no mouse, and native <video>
+  // controls aren't D-pad navigable).
+  const { ref: controlsRef, focusKey: controlsFocusKey } = useFocusable({
+    focusKey: "player-controls",
+    trackChildren: true,
+  });
+
+  const showControlsTemporarily = useCallback(() => {
     setShowControls(true);
     if (controlsTimeout.current) globalThis.clearTimeout(controlsTimeout.current);
-    controlsTimeout.current = globalThis.setTimeout(() => setShowControls(false), 5000) as unknown as number;
-  };
+    controlsTimeout.current = globalThis.setTimeout(
+      () => setShowControls(false),
+      5000,
+    ) as unknown as number;
+  }, []);
+
+  const togglePlayPause = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) v.play().catch(() => {});
+    else v.pause();
+  }, []);
+
+  const handleMouseMove = showControlsTemporarily;
+
+  // Show the controls on any remote keypress; OK toggles play/pause when the
+  // overlay is hidden. When the overlay appears, move focus into it so the
+  // D-pad can reach the play/pause + Audio/Subtitle buttons.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const code = e.keyCode || e.which;
+      const isBack = code === 10009 || e.key === "Backspace" || e.key === "Escape";
+      if (isBack) return; // handled by the global remote hook (navigate back)
+      const wasHidden = !showControls;
+      showControlsTemporarily();
+      // OK / Enter while hidden → toggle playback instead of needing a target.
+      if ((code === 13 || e.key === "Enter") && wasHidden) {
+        togglePlayPause();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showControls, showControlsTemporarily, togglePlayPause]);
+
+  // When the overlay becomes visible, focus the play/pause button.
+  useEffect(() => {
+    if (showControls) {
+      const t = globalThis.setTimeout(() => setFocus("player-playpause"), 50);
+      return () => globalThis.clearTimeout(t);
+    }
+  }, [showControls]);
 
   const handleTrackChange = async (type: "audio" | "subtitle", streamId: number | null) => {
     if (!ratingKey) return;
+    const nextAudio = type === "audio" ? streamId : selectedAudio;
+    const nextSub = type === "subtitle" ? streamId : selectedSub;
     if (type === "audio") setSelectedAudio(streamId);
     else setSelectedSub(streamId);
-    const url = await flixor.plexServer.getStreamUrl(ratingKey, selectedMedia);
-    setVideoUrl(url);
+
+    // Switching audio or subtitles requires a fresh transcode so Plex applies
+    // (and burns) the chosen streams — the WebView can't switch embedded audio
+    // or render Plex text subs itself. Resume at the current position.
+    const offsetMs = Math.floor((videoRef.current?.currentTime ?? 0) * 1000);
+    try {
+      const session = await startTranscode(ratingKey, {
+        mediaIndex: selectedMedia,
+        audioStreamID: nextAudio != null ? String(nextAudio) : undefined,
+        // null subtitle ⇒ "0" (off); otherwise the chosen track (burned in).
+        subtitleStreamID: nextSub == null ? "0" : String(nextSub),
+        offset: offsetMs,
+      });
+      transcodeSessionRef.current = session;
+      resumeApplied.current = true; // offset handles resume; don't re-seek
+      setVideoUrl(session.startUrl);
+    } catch {
+      const url = await flixor.plexServer.getStreamUrl(ratingKey, selectedMedia);
+      setVideoUrl(url);
+    }
   };
 
   const handleSpeedChange = useCallback((speed: number) => {
@@ -463,9 +537,12 @@ export function PlayerPage() {
         ref={videoRef}
         className="tv-video"
         autoPlay
-        controls={showControls}
+        /* Native controls aren't D-pad navigable on Tizen — use the custom
+           focusable overlay below instead. */
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
+        onPlay={() => setIsPaused(false)}
+        onPause={() => setIsPaused(true)}
       >
         Your browser does not support the video tag.
       </video>
@@ -526,10 +603,11 @@ export function PlayerPage() {
       )}
 
       {showControls && (
-        <div className="player-overlay">
-          <button className="player-exit" onClick={() => navigate(-1)}>
+        <FocusContext.Provider value={controlsFocusKey}>
+        <div className="player-overlay" ref={controlsRef}>
+          <FocusableButton className="player-exit" onClick={() => navigate(-1)}>
             &times;
-          </button>
+          </FocusableButton>
 
           <div className="player-meta">
             <h2 className="player-title">{item?.title}</h2>
@@ -566,55 +644,63 @@ export function PlayerPage() {
           </div>
 
           <div className="player-tracks">
+            {/* Play / Pause — takes initial focus when the overlay opens */}
+            <FocusableButton
+              className="track-group-btn"
+              focusKey="player-playpause"
+              focusOnMount
+              onClick={togglePlayPause}
+            >
+              {isPaused ? "▶ Play" : "⏸ Pause"}
+            </FocusableButton>
+
             {/* Version picker trigger */}
             {item?.Media && item.Media.length > 1 && (
-              <button
+              <FocusableButton
                 className="track-group-btn"
                 onClick={() => setShowVersionPicker(true)}
               >
                 Version {selectedMedia + 1}
-              </button>
+              </FocusableButton>
             )}
 
             {/* Quality picker — options filtered by source resolution via StreamDecisionService */}
             <div className="track-group">
               <h3>Quality</h3>
               {qualityOptions.map((opt) => (
-                <button
+                <FocusableButton
                   key={opt.value}
                   className={`track-btn ${quality === opt.value ? "active" : ""}`}
                   onClick={() => handleQualityChange(opt.value)}
                 >
                   {opt.label}
-                </button>
+                </FocusableButton>
               ))}
             </div>
 
             {/* Audio track picker trigger */}
-            <button
+            <FocusableButton
               className="track-group-btn"
               onClick={() => setShowAudioPicker(true)}
             >
               Audio: {audioTracks.find((t) => t.id === selectedAudio)?.language || "Default"}
-            </button>
+            </FocusableButton>
 
             {/* Subtitle track picker trigger */}
-            <button
+            <FocusableButton
               className="track-group-btn"
               onClick={() => setShowSubPicker(true)}
             >
               Subtitles: {selectedSub === null ? "Off" : subtitleTracks.find((t) => t.id === selectedSub)?.language || "On"}
-            </button>
+            </FocusableButton>
 
             {/* Playback speed control */}
-            <button
-              className="track-group-btn"
-              onClick={cycleSpeed}
-            >
+            <FocusableButton className="track-group-btn" onClick={cycleSpeed}>
               Speed: {playbackSpeed}x
-            </button>
+            </FocusableButton>
           </div>
         </div>
+        </FocusContext.Provider>
       )}
     </div>
   );
