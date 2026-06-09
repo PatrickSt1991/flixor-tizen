@@ -18,11 +18,15 @@ export function HeroCarousel({ items, onBackdropChange }: HeroCarouselProps) {
   const navigate = useNavigate();
   const pausedRef = useRef(paused);
 
-  const { ref: sectionRef, focusKey } = useFocusable({
+  // The focus boundary lives on a TIGHT wrapper around just the action
+  // buttons — NOT the whole 85vh <section>. A section-sized focusable stole
+  // focus when navigating UP from the first row (its bottom edge is nearest,
+  // and norigin targets the container instead of delegating to a child), so
+  // up from the rows landed on the invisible section. A small wrapper (like
+  // the nav) delegates correctly to Play / More Info. Verified in Chromium 63.
+  const { ref: actionsRef, focusKey } = useFocusable({
     focusKey: "hero-carousel",
     trackChildren: true,
-    // Keep left/right inside the hero (Play <-> More Info); without this,
-    // right-arrow walked diagonally up into the top nav. Up/down pass through.
     isFocusBoundary: true,
     focusBoundaryDirections: ["left", "right"],
   });
@@ -154,32 +158,32 @@ export function HeroCarousel({ items, onBackdropChange }: HeroCarouselProps) {
     : null;
 
   return (
-    <FocusContext.Provider value={focusKey}>
-      <section ref={sectionRef} className={`hero-section ${fadeClass}`}>
-        <div className="hero-content">
-          {logo ? (
-            <img src={logo} className="hero-logo" alt={currentItem.title} />
-          ) : (
-            <h1 className="hero-title">{currentItem.title}</h1>
+    <section className={`hero-section ${fadeClass}`}>
+      <div className="hero-content">
+        {logo ? (
+          <img src={logo} className="hero-logo" alt={currentItem.title} />
+        ) : (
+          <h1 className="hero-title">{currentItem.title}</h1>
+        )}
+
+        <div className="hero-meta">
+          {currentItem.year && (
+            <span className="meta-badge">{currentItem.year}</span>
           )}
+          <span className="meta-badge">
+            {currentItem.contentRating || "PG-13"}
+          </span>
+          {formattedDuration && (
+            <span className="meta-badge">{formattedDuration}</span>
+          )}
+        </div>
 
-          <div className="hero-meta">
-            {currentItem.year && (
-              <span className="meta-badge">{currentItem.year}</span>
-            )}
-            <span className="meta-badge">
-              {currentItem.contentRating || "PG-13"}
-            </span>
-            {formattedDuration && (
-              <span className="meta-badge">{formattedDuration}</span>
-            )}
-          </div>
+        <p className="hero-overview">
+          {currentItem.summary || "No overview available for this title."}
+        </p>
 
-          <p className="hero-overview">
-            {currentItem.summary || "No overview available for this title."}
-          </p>
-
-          <div className="hero-actions">
+        <FocusContext.Provider value={focusKey}>
+          <div className="hero-actions" ref={actionsRef}>
             <button
               ref={playRef}
               className={`btn-primary${playFocused ? " focused" : ""}`}
@@ -198,8 +202,8 @@ export function HeroCarousel({ items, onBackdropChange }: HeroCarouselProps) {
               More Info
             </button>
           </div>
-        </div>
-      </section>
-    </FocusContext.Provider>
+        </FocusContext.Provider>
+      </div>
+    </section>
   );
 }

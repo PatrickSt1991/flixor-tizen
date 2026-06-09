@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useFocusable } from "@noriginmedia/norigin-spatial-navigation";
+import { useFocusable, FocusContext } from "@noriginmedia/norigin-spatial-navigation";
 import { UserAvatar } from "./UserAvatar";
 import { flixor } from "../services/flixor";
 
@@ -37,7 +37,7 @@ export function TopNav() {
     () => flixor.currentProfile?.thumb,
   );
 
-  const { ref: navRef } = useFocusable({
+  const { ref: navRef, focusKey } = useFocusable({
     focusKey: "top-nav",
     trackChildren: true,
     // Left/right cycle the menu only; Down leaves toward the page content.
@@ -67,6 +67,7 @@ export function TopNav() {
   }, [navigate]);
 
   return (
+    <FocusContext.Provider value={focusKey}>
     <nav ref={navRef} className="tv-nav">
       <h1 className="logo">FLIXOR</h1>
       <div className="nav-items">
@@ -114,5 +115,6 @@ export function TopNav() {
         />
       </div>
     </nav>
+    </FocusContext.Provider>
   );
 }
