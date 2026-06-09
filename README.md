@@ -8,242 +8,124 @@
 [![License][license-shield]][license-url]
 
 <div align="center">
-  <h1>Flixor</h1>
-  <p><strong>A beautiful, Netflix-style client for your Plex library</strong></p>
-  <p>Available on Web, macOS, iOS, Android, and tvOS</p>
+  <h1>Flixor for Samsung Tizen TV</h1>
+  <p><strong>A beautiful, Netflix-style Plex client — running natively on your Samsung TV</strong></p>
+  <p>Sideloadable <code>.wgt</code> · full remote navigation · no casting, no second device</p>
 </div>
 
 ---
 
-## 📺 Samsung Tizen TV Port
+## What is this?
 
-This fork packages Flixor as a sideloadable **Samsung Tizen TV** app (`.wgt`),
-with the work needed to run on Tizen's Chromium-63 WebView: a Chrome-63 build
-pipeline, `.wgt` packaging/signing CI, direct-to-Plex auth on the TV, full
-D-pad spatial navigation, an on-screen PIN pad, and TV layout/CSS fixes.
+[Flixor](https://github.com/Flixorui/flixor) is a gorgeous, Netflix-style Plex
+client. It ships for Web, macOS, iOS and Android — **but not for Samsung TVs.**
 
-Flixor itself is created by the upstream **[Flixor project](https://github.com/Flixorui/flixor)**
-(via [lusky3/flixor-tizen](https://github.com/lusky3/flixor-tizen)). Please
-support the original authors too — their Ko-fi is `flixor`.
+This project is an **unofficial port that packages Flixor as a sideloadable
+Samsung Tizen TV app** (`.wgt`), so you can run it right on the television with
+your remote — no Chromecast, no phone, no server-side plugin.
 
-### ☕ Support the Tizen port
+> **Credit where it's due:** all the app, design and features are the work of the
+> original [**Flixor project**](https://github.com/Flixorui/flixor). This repo only
+> does the work needed to make it run on a TV. Please ⭐ and support them too — see
+> [Credits](#credits).
 
-If the TV port is useful to you, you can support **the porting work** here
-(separate from the upstream project):
+## What the port adds
 
-<img src="apps/tizen/public/ko-fi-qr.webp" alt="Ko-fi donation QR code" width="160" />
+Getting a modern web app to run on Samsung's **Chromium-63 WebView** took a fair
+bit of work. On top of upstream Flixor, this port adds:
 
----
+- **A Chrome-63-compatible build pipeline** — CSS/JS transforms for the old WebView
+- **`.wgt` packaging & signing CI** — every push builds an installable, signed release
+- **Direct-to-Plex authentication on the TV**, with an **on-screen PIN pad**
+- **Full D-pad / remote spatial navigation** across the entire UI
+- **Audio & subtitle selection** — before *and* during playback, with burned-in
+  subtitles so they actually render on the TV
+- **TV-first layout & CSS fixes** throughout (focus states, grids, hero, overlays)
 
-## About
-
-Flixor is a modern, cross-platform Plex client that brings a Netflix-like experience to your media library. Browse beautiful rows, see rich metadata with ratings from multiple sources, and enjoy powerful playback on any device.
-
-### Supported Platforms
-
-| Platform | Status | Player |
-|----------|--------|--------|
-| **Web** | Available | HLS.js / DASH.js |
-| **macOS** | Available | MPV (HDR, Dolby Vision) |
-| **iOS** | Available | KSPlayer |
-| **Android** | Available | MPV |
-| **tvOS** | In Development | - |
-
-## Features
-
-### Core Experience
-- **Netflix-style UI** - Continue Watching, Trending, Collections, Watchlist, and more
-- **Rich metadata** - Trailers, cast info, tech badges (4K/HDR/Atmos/DTS-X)
-- **Smart search** - Search across Plex and TMDB with intelligent filtering
-- **Ultra-fast grids** - Optimized for libraries with thousands of items
-- **Cross-platform sync** - Watch progress syncs across all your devices
-
-### Playback
-- **Web**: Built-in DASH/HLS player with Picture-in-Picture and subtitle support
-- **macOS**: MPV-powered with HDR, Dolby Vision, and advanced audio passthrough
-- **Mobile**: Native players with background playback and streaming quality options
-
-### Integrations
-| Service | Description |
-|---------|-------------|
-| **TMDB** | Movie/TV metadata, posters, backdrops, trailers |
-| **Trakt** | Watch history sync, scrobbling, ratings, watchlists |
-| **MDBList** | Aggregated ratings from IMDb, RT, Letterboxd, Metacritic |
-| **Overseerr** | Request movies and shows directly from the app |
-
-### Mobile-Specific Features
-- OTA (Over-the-Air) updates without app store
-- Configurable bottom navigation tabs
-- Optional TMDB search integration
-- Landscape continue watching cards with progress indicators
-
-## Screenshots
-
-<details>
-<summary>Click to view screenshots</summary>
-
-![Home](docs/screenshots/flixor-01.jpg)
-![Details](docs/screenshots/flixor-02.jpg)
-![Library](docs/screenshots/flixor-lib-00m52.jpg)
-
-</details>
+> ⚠️ **Beta.** It boots, connects to your Plex server, browses your library, and
+> plays movies & shows with audio/subtitle switching. There are still rough edges
+> being worked through — bug reports and TV-model compatibility notes are very welcome.
 
 ## Installation
 
-### Web App (Docker)
+1. **Enable Developer Mode** on your Samsung TV
+   (Apps → press `1`, `2`, `3`, `4`, `5` on the remote → turn Developer Mode **On**,
+   and enter your PC's IP).
+2. **Download** the latest `Flixor.wgt` from the
+   [**Releases**](https://github.com/PatrickSt1991/flixor-tizen/releases/latest) page.
+3. **Sideload** it using any of:
+   - [**Jellyfin2Samsung installer**](https://github.com/Jellyfin2Samsung/Samsung-Jellyfin-Installer/releases/latest) (easiest — GUI, no SDK)
+   - **Tizen Studio** (`Device Manager` → install `.wgt`)
+   - **`sdb`** (`sdb install Flixor.wgt`)
+4. Launch Flixor on the TV and sign in to Plex with the on-screen PIN.
 
-**Using the published image:**
-```bash
-docker run -d \
-  --name flixor \
-  -p 8080:80 \
-  -e SESSION_SECRET=your-secure-secret-here \
-  -v flixor-config:/app/config \
-  -v flixor-cache:/app/cache \
-  --restart unless-stopped \
-  ghcr.io/flixorui/flixor:latest
-```
+Releases are signed with a stable author certificate, so new versions install
+over previous ones (developer-mode install).
 
-**Using Docker Compose:**
-```yaml
-services:
-  flixor:
-    image: ghcr.io/flixorui/flixor:latest
-    container_name: flixor
-    environment:
-      - SESSION_SECRET=your-secure-secret-here
-    ports:
-      - "8080:80"
-    volumes:
-      - flixor-config:/app/config
-      - flixor-cache:/app/cache
-    restart: unless-stopped
+## Building from source
 
-volumes:
-  flixor-config:
-  flixor-cache:
-```
+Requires **Node.js 22+**.
 
 ```bash
-docker compose up -d
+npm ci
+npm run build:core              # build the @flixor/core package
+npm run build -w flixor-tizen   # build the Tizen web bundle → apps/tizen/dist
 ```
 
-Open `http://localhost:8080` and sign in with Plex.
-
-### macOS
-
-1. Download the latest `.dmg` from [Releases](https://github.com/Flixorui/flixor/releases)
-2. Drag Flixor to your Applications folder
-3. Open and sign in with Plex
-
-**Requirements:** macOS 13.0 (Ventura) or later
-
-### iOS / Android
-
-Download from the [Releases](https://github.com/Flixorui/flixor/releases) page or join the TestFlight/beta program.
-
-The mobile apps support OTA updates - you'll receive update notifications within the app.
-
-## Development
-
-### Prerequisites
-- Node.js 18+
-- npm or yarn
-
-### Web Frontend
-```bash
-cd web_frontend
-npm install
-npm run dev
-```
-
-### Mobile App
-```bash
-cd apps/mobile
-npm install
-npx expo start
-```
-
-### macOS App
-
-Open `apps/macos/FlixorMac.xcodeproj` in Xcode and build.
-
-### Full Stack (Web + Backend)
-```bash
-npm install
-npm run dev:all
-```
-
-The dev server runs on `http://localhost:5173` and is accessible on your local network.
-
-## Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SESSION_SECRET` | Secret for session encryption | Required |
-| `VITE_PROXY_TARGET` | Backend URL for dev proxy | `http://localhost:3000` |
-
-### App Settings
-
-Settings are available in-app under Settings:
-
-- **Catalogs** - Choose which Plex libraries appear
-- **Home Screen** - Configure hero and row visibility
-- **Integrations** - Set up TMDB, Trakt, MDBList, Overseerr
-- **Playback** - Video player preferences
-- **Appearance** - Episode layout, backdrop options
-
-## OTA Updates (Mobile)
-
-The mobile app supports self-hosted OTA updates. To publish an update:
+`apps/tizen/dist` contains the web bundle plus the generated `config.xml` and icon.
+Package and sign it into a `.wgt` with the Tizen CLI:
 
 ```bash
-export FLIXOR_OTA_UPLOAD_KEY=your-upload-key
-./scripts/publish-ota-update.sh
+tizen package -t wgt -s <your-profile> -- apps/tizen/dist
 ```
 
-Users will receive update notifications on app launch.
+Or just let CI do it — pushing to `main` builds and publishes a signed `.wgt`
+(see [`.github/workflows/tizen-wgt.yml`](.github/workflows/tizen-wgt.yml)).
 
-## Community
+## Support the porting work
 
-- [Discord](https://discord.gg/flixor) - Join the community
-- [Reddit](https://www.reddit.com/r/flixor/) - Follow updates
-- [GitHub Issues](https://github.com/Flixorui/flixor/issues) - Report bugs
+If this TV port is useful to you, you can support **the porting effort**
+(this is separate from — and in addition to — the upstream project):
 
-## Contributing
+[**☕ ko-fi.com/patrickst**](https://ko-fi.com/patrickst)
 
-Contributions are welcome! Please read our contributing guidelines before submitting a PR.
+<img src="apps/tizen/public/ko-fi-qr.webp" alt="Ko-fi donation QR code" width="160" />
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+## Credits
+
+This port stands entirely on the shoulders of others:
+
+- **[Flixor](https://github.com/Flixorui/flixor)** — the original Netflix-style
+  Plex client. All of the app, its UI and its features are their work. ([Discord](https://discord.gg/flixor) · [r/flixor](https://www.reddit.com/r/flixor/))
+  If you enjoy Flixor, please support the original authors (their Ko-fi is `flixor`).
+- **[lusky3/flixor-tizen](https://github.com/lusky3/flixor-tizen)** — the earlier
+  Tizen fork this work builds on.
 
 ## License
 
-Distributed under the GPL-3.0 License. See `LICENSE` for more information.
+Distributed under the **Flixor Public License** — AGPL-3.0 with a
+**Non-Commercial & Public-Source addendum** by the upstream copyright holder.
+See [`LICENSE.md`](LICENSE.md) for the full terms.
 
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=Flixorui/flixor&type=Date)](https://star-history.com/#Flixorui/flixor&Date)
+In short: free for personal, non-commercial use; if you host or distribute a
+modified version you must keep your complete source publicly available under the
+same license (which this repository does). The "Flixor" name and logo belong to
+the upstream project and are used here only to describe the origin of the software.
 
 ---
 
 <p align="center">
-  Made with care for the Plex community
+  A community port for the Plex community — with thanks to the Flixor team.
 </p>
 
 <!-- MARKDOWN LINKS & IMAGES -->
-[contributors-shield]: https://img.shields.io/github/contributors/Flixorui/flixor.svg?style=for-the-badge
-[contributors-url]: https://github.com/Flixorui/flixor/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/Flixorui/flixor.svg?style=for-the-badge
-[forks-url]: https://github.com/Flixorui/flixor/network/members
-[stars-shield]: https://img.shields.io/github/stars/Flixorui/flixor.svg?style=for-the-badge
-[stars-url]: https://github.com/Flixorui/flixor/stargazers
-[issues-shield]: https://img.shields.io/github/issues/Flixorui/flixor.svg?style=for-the-badge
-[issues-url]: https://github.com/Flixorui/flixor/issues
-[license-shield]: https://img.shields.io/github/license/Flixorui/flixor.svg?style=for-the-badge
-[license-url]: http://www.gnu.org/licenses/gpl-3.0.en.html
+[contributors-shield]: https://img.shields.io/github/contributors/PatrickSt1991/flixor-tizen.svg?style=for-the-badge
+[contributors-url]: https://github.com/PatrickSt1991/flixor-tizen/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/PatrickSt1991/flixor-tizen.svg?style=for-the-badge
+[forks-url]: https://github.com/PatrickSt1991/flixor-tizen/network/members
+[stars-shield]: https://img.shields.io/github/stars/PatrickSt1991/flixor-tizen.svg?style=for-the-badge
+[stars-url]: https://github.com/PatrickSt1991/flixor-tizen/stargazers
+[issues-shield]: https://img.shields.io/github/issues/PatrickSt1991/flixor-tizen.svg?style=for-the-badge
+[issues-url]: https://github.com/PatrickSt1991/flixor-tizen/issues
+[license-shield]: https://img.shields.io/badge/license-AGPL--3.0%20%2B%20NC-blue.svg?style=for-the-badge
+[license-url]: ./LICENSE.md
