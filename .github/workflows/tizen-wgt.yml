@@ -148,4 +148,5 @@ jobs:
 
             Signed with a cached, stable Tizen author certificate — updates install over previous builds (developer-mode install).
           draft: false
-          prerelease: false
+          # Mark pre-1.0 / beta / rc builds as GitHub pre-releases automatically.
+          prerelease: ${{ contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'rc') || contains(steps.version.outputs.version, 'alpha') }}
