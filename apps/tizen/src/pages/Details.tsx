@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import {
+  useFocusable,
+  FocusContext,
+} from "@noriginmedia/norigin-spatial-navigation";
 import { flixor } from "../services/flixor";
+import { FocusableButton } from "../components/FocusableButton";
 import type {
   PlexMediaItem,
   TMDBMedia,
@@ -51,6 +56,15 @@ import type { WatchProvider } from "../components/ServiceIcons";
 export function DetailsPage() {
   const { ratingKey } = useParams<{ ratingKey: string }>();
   const navigate = useNavigate();
+
+  // Page focus context: without it the page's focusables register under the
+  // root and there's no defined starting point. The action buttons used to be
+  // plain <button autoFocus> (invisible to spatial nav — couldn't move, OK
+  // didn't fire); they're FocusableButton now and live under this context.
+  const { ref: pageRef, focusKey: pageFocusKey } = useFocusable({
+    focusKey: "details-page",
+    trackChildren: true,
+  });
 
   const [item, setItem] = useState<PlexMediaItem | null>(null);
   const [seasons, setSeasons] = useState<PlexMediaItem[]>([]);
@@ -852,13 +866,14 @@ export function DetailsPage() {
     : null;
 
   return (
-    <div className="tv-container details-page">
+    <FocusContext.Provider value={pageFocusKey}>
+    <div ref={pageRef} className="tv-container details-page">
       <UltraBlurBackground src={backdrop} />
 
       <div className="details-content">
-        <button className="btn-back" onClick={() => navigate(-1)}>
+        <FocusableButton className="btn-back" onClick={() => navigate(-1)}>
           &larr; Back
-        </button>
+        </FocusableButton>
 
         <DetailsHero
           title={item.title}
@@ -900,9 +915,10 @@ export function DetailsPage() {
           {/* Action buttons */}
           <div className="hero-actions">
             {item.type === "movie" ? (
-              <button
+              <FocusableButton
                 className="btn-primary"
-                autoFocus
+                focusKey="details-play"
+                focusOnMount
                 onClick={() =>
                   navigate(`/player/${item.ratingKey}`, {
                     state: { mediaIndex: selectedMedia },
@@ -910,44 +926,46 @@ export function DetailsPage() {
                 }
               >
                 {resumeLabel ? `▶ Resume · ${resumeLabel}` : "▶ Play"}
-              </button>
+              </FocusableButton>
             ) : onDeckEpisode ? (
-              <button
+              <FocusableButton
                 className="btn-primary"
-                autoFocus
+                focusKey="details-play"
+                focusOnMount
                 onClick={() => navigate(`/player/${onDeckEpisode.ratingKey}`)}
               >
                 ▶ Continue S{onDeckEpisode.parentIndex || "?"}:E
                 {onDeckEpisode.index || "?"}
-              </button>
+              </FocusableButton>
             ) : (
-              <button
+              <FocusableButton
                 className="btn-primary"
-                autoFocus
+                focusKey="details-play"
+                focusOnMount
                 onClick={() => {
                   if (episodes.length > 0)
                     navigate(`/player/${episodes[0].ratingKey}`);
                 }}
               >
                 ▶ Play S1:E1
-              </button>
+              </FocusableButton>
             )}
 
             {plexTrailer && (
-              <button
+              <FocusableButton
                 className="btn-secondary"
                 onClick={() => navigate(`/player/${plexTrailer.ratingKey}`)}
               >
                 Trailer
-              </button>
+              </FocusableButton>
             )}
             {!plexTrailer && youtubeTrailerKey && (
-              <button
+              <FocusableButton
                 className="btn-secondary"
                 onClick={() => setShowTrailerModal(true)}
               >
                 ▶ Trailer
-              </button>
+              </FocusableButton>
             )}
 
             <WatchlistButton
@@ -959,12 +977,12 @@ export function DetailsPage() {
             {tmdbId && <RequestButton tmdbId={tmdbId} mediaType={mediaType} />}
 
             {item?.Media && item.Media.length > 1 && (
-              <button
+              <FocusableButton
                 className="btn-secondary"
                 onClick={() => setShowVersionSelector(true)}
               >
                 Version {selectedMedia + 1}
-              </button>
+              </FocusableButton>
             )}
           </div>
         </DetailsHero>
@@ -1018,5 +1036,6 @@ export function DetailsPage() {
         />
       )}
     </div>
+    </FocusContext.Provider>
   );
 }

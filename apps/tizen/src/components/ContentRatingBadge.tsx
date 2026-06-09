@@ -81,7 +81,10 @@ export default function ContentRatingBadge({
   if (imageType) {
     return (
       <img
-        src={`/badges/${imageType}.png`}
+        // Relative to the document (BASE_URL = "./"), NOT root-absolute:
+        // "/badges/..." resolves to file:///badges/... on the TV's local
+        // scheme and fails to load. import.meta.env.BASE_URL keeps it relative.
+        src={`${import.meta.env.BASE_URL}badges/${imageType}.png`}
         alt={normalized}
         className={className}
         style={{ height: sizeHeight[size], width: "auto", objectFit: "contain" }}
