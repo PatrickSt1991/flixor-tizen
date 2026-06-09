@@ -20,56 +20,38 @@ describe("ContentRatingBadge", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  // ── Image badge for known ratings ──────────────────────────────────
+  // ── Colored text pill for known ratings ────────────────────────────
+  // (Image badges were removed — the rating PNGs were never shipped, so the
+  //  component always renders the colored text pill now.)
 
-  const imageBadgeRatings = [
-    { rating: "G", file: "g" },
-    { rating: "PG", file: "pg" },
-    { rating: "PG-13", file: "pg13" },
-    { rating: "R", file: "r" },
-    { rating: "TV-G", file: "tvg" },
-    { rating: "TV-PG", file: "tvpg" },
-    { rating: "TV-14", file: "tv14" },
-    { rating: "TV-MA", file: "tvma" },
-    { rating: "NR", file: "unrated" },
-  ];
+  const knownRatings = ["G", "PG", "PG-13", "R", "TV-G", "TV-PG", "TV-14", "TV-MA", "NR"];
 
-  it.each(imageBadgeRatings)(
-    "renders image badge for $rating → /badges/$file.png",
-    ({ rating, file }) => {
-      render(<ContentRatingBadge rating={rating} />);
-      const img = screen.getByRole("img", { name: rating });
-      expect(img).toBeInTheDocument();
-      expect(img).toHaveAttribute("src", `/badges/${file}.png`);
-    },
-  );
+  it.each(knownRatings)("renders a colored text pill for %s", (rating) => {
+    render(<ContentRatingBadge rating={rating} />);
+    const pill = screen.getByText(rating);
+    expect(pill).toBeInTheDocument();
+    expect(pill.tagName).toBe("SPAN");
+  });
 
   // ── Normalization: variations map to canonical form ─────────────────
 
   const normalizedVariations = [
-    { input: "TVMA", expected: "TV-MA", file: "tvma" },
-    { input: "tvpg", expected: "TV-PG", file: "tvpg" },
-    { input: "PG13", expected: "PG-13", file: "pg13" },
-    { input: "TVY", expected: "TV-Y", file: undefined },
-    { input: "TVY7", expected: "TV-Y7", file: undefined },
-    { input: "NC17", expected: "NC-17", file: undefined },
-    { input: "NOTRATED", expected: "NR", file: "unrated" },
-    { input: "NOT RATED", expected: "NR", file: "unrated" },
-    { input: "UNRATED", expected: "NR", file: "unrated" },
+    { input: "TVMA", expected: "TV-MA" },
+    { input: "tvpg", expected: "TV-PG" },
+    { input: "PG13", expected: "PG-13" },
+    { input: "TVY", expected: "TV-Y" },
+    { input: "TVY7", expected: "TV-Y7" },
+    { input: "NC17", expected: "NC-17" },
+    { input: "NOTRATED", expected: "NR" },
+    { input: "NOT RATED", expected: "NR" },
+    { input: "UNRATED", expected: "NR" },
   ];
 
   it.each(normalizedVariations)(
     "normalizes '$input' to '$expected'",
-    ({ input, expected, file }) => {
+    ({ input, expected }) => {
       render(<ContentRatingBadge rating={input} />);
-      if (file) {
-        // Known image badge
-        const img = screen.getByRole("img", { name: expected });
-        expect(img).toHaveAttribute("src", `/badges/${file}.png`);
-      } else {
-        // Text pill fallback
-        expect(screen.getByText(expected)).toBeInTheDocument();
-      }
+      expect(screen.getByText(expected)).toBeInTheDocument();
     },
   );
 
@@ -108,10 +90,10 @@ describe("ContentRatingBadge", () => {
 
   // ── Size prop ──────────────────────────────────────────────────────
 
-  it("applies size height to image badge", () => {
+  it("applies size font to large text pill", () => {
     render(<ContentRatingBadge rating="G" size="lg" />);
-    const img = screen.getByRole("img", { name: "G" });
-    expect(img.style.height).toBe("28px");
+    const pill = screen.getByText("G");
+    expect(pill.style.fontSize).toBe("14px");
   });
 
   it("applies size font to text pill", () => {

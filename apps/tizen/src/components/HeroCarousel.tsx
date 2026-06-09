@@ -34,8 +34,25 @@ export function HeroCarousel({ items, onBackdropChange }: HeroCarouselProps) {
     if (page) page.scrollTo({ top: 0, behavior: "auto" });
   };
 
+  // Shared by onClick AND onEnterPress — norigin OK fires onEnterPress, NOT
+  // the DOM onClick, so without these the hero buttons did nothing on the
+  // remote. Play goes to the player when the item is directly playable
+  // (has a Media Part), otherwise to its details page (hero items pulled from
+  // trending/TMDB often have no Plex Part yet).
+  const handlePlay = () => {
+    const cur = items[currentIndex];
+    if (!cur) return;
+    const part = cur.Media?.[0]?.Part?.[0];
+    navigate(part ? `/player/${cur.ratingKey}` : `/details/${cur.ratingKey}`);
+  };
+  const handleInfo = () => {
+    const cur = items[currentIndex];
+    if (cur) navigate(`/details/${cur.ratingKey}`);
+  };
+
   const { ref: playRef, focused: playFocused, focusSelf: focusPlay } = useFocusable({
     focusKey: "hero-play",
+    onEnterPress: handlePlay,
     onFocus: () => {
       setPaused(true);
       emitBackdropForCurrent();
@@ -45,6 +62,7 @@ export function HeroCarousel({ items, onBackdropChange }: HeroCarouselProps) {
   });
 
   const { ref: infoRef, focused: infoFocused } = useFocusable({
+    onEnterPress: handleInfo,
     onFocus: () => {
       setPaused(true);
       emitBackdropForCurrent();
@@ -188,17 +206,14 @@ export function HeroCarousel({ items, onBackdropChange }: HeroCarouselProps) {
           <button
             ref={playRef}
             className={`btn-primary${playFocused ? " focused" : ""}`}
-            onClick={() => {
-              const part = currentItem.Media?.[0]?.Part?.[0];
-              if (part) navigate(`/player/${currentItem.ratingKey}`);
-            }}
+            onClick={handlePlay}
           >
             <span className="icon">▶</span> Play
           </button>
           <button
             ref={infoRef}
             className={`btn-secondary${infoFocused ? " focused" : ""}`}
-            onClick={() => navigate(`/details/${currentItem.ratingKey}`)}
+            onClick={handleInfo}
           >
             More Info
           </button>
