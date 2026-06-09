@@ -8,6 +8,7 @@ const mockNavigate = vi.fn();
 vi.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
   useParams: () => mockParams,
+  useLocation: () => ({ state: null }),
 }));
 
 const mockGetMetadata = vi.fn();

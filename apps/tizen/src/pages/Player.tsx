@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   useFocusable,
   FocusContext,
@@ -45,6 +45,14 @@ const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 
 export function PlayerPage() {
   const { ratingKey } = useParams<{ ratingKey: string }>();
+  // Tracks pre-selected on the Details page (regular-Plex style: pick audio/
+  // subtitle before pressing Play). Applied on the initial load below.
+  const location = useLocation();
+  const navState = location.state as {
+    mediaIndex?: number;
+    audioStreamID?: number | null;
+    subtitleStreamID?: number | null;
+  } | null;
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [item, setItem] = useState<PlexMediaItem | null>(null);
   const [showControls, setShowControls] = useState(false);
@@ -54,7 +62,7 @@ export function PlayerPage() {
   const [subtitleTracks, setSubtitleTracks] = useState<PlexStream[]>([]);
   const [selectedAudio, setSelectedAudio] = useState<number | null>(null);
   const [selectedSub, setSelectedSub] = useState<number | null>(null);
-  const [selectedMedia, setSelectedMedia] = useState(0);
+  const [selectedMedia, setSelectedMedia] = useState(navState?.mediaIndex ?? 0);
   const [quality, setQuality] = useState(() => loadSettings().preferredQuality || "original");
   const [playbackSpeed, setPlaybackSpeed] = useState(() => loadSettings().preferredPlaybackSpeed ?? 1);
   const [nextEpisode, setNextEpisode] = useState<PlexMediaItem | null>(null);
@@ -165,15 +173,44 @@ export function PlayerPage() {
         const decision = decideStream(sdInput, quality);
         setPlaybackStrategy(decision.strategy);
 
-        // Try backend-proxied stream URL first
-        const backendResult = await getBackendStreamUrl(ratingKey, {
-          mediaIndex: selectedMedia,
-          maxBitrate: decision.maxBitrate,
-          directPlay: decision.strategy === "direct-play",
-          directStream: decision.strategy === "direct-stream",
-        });
+        // If Details pre-selected an audio/subtitle track, honor it up front:
+        // force a transcode with those streams (a direct stream can't apply a
+        // non-default audio track or burn Plex subs).
+        const preAudio = navState?.audioStreamID;
+        const preSub = navState?.subtitleStreamID;
+        const hasPreselect = preAudio != null || preSub != null;
+        let streamHandled = false;
+        if (hasPreselect) {
+          if (preAudio != null) setSelectedAudio(preAudio);
+          if (preSub != null) setSelectedSub(preSub);
+          try {
+            const session = await startTranscode(ratingKey, {
+              mediaIndex: selectedMedia,
+              maxVideoBitrate: decision.maxBitrate,
+              audioStreamID: preAudio != null ? String(preAudio) : undefined,
+              subtitleStreamID: preSub == null ? "0" : String(preSub),
+            });
+            transcodeSessionRef.current = session;
+            setVideoUrl(session.startUrl);
+            streamHandled = true;
+          } catch {
+            // fall through to the normal path
+          }
+        }
 
-        if (backendResult) {
+        // Try backend-proxied stream URL first
+        const backendResult = streamHandled
+          ? null
+          : await getBackendStreamUrl(ratingKey, {
+              mediaIndex: selectedMedia,
+              maxBitrate: decision.maxBitrate,
+              directPlay: decision.strategy === "direct-play",
+              directStream: decision.strategy === "direct-stream",
+            });
+
+        if (streamHandled) {
+          // already set up above
+        } else if (backendResult) {
           backendSessionRef.current = backendResult.sessionId;
           setVideoUrl(backendResult.streamUrl);
         } else {
@@ -208,10 +245,14 @@ export function PlayerPage() {
         const subTrackInfos = getSubtitleOptions(streams);
         setAudioTracks(streams.filter((s) => audioTrackInfos.some((t) => t.id === s.id)));
         setSubtitleTracks(streams.filter((s) => subTrackInfos.some((t) => t.id === s.id)));
-        const activeAudio = streams.find((s) => s.streamType === 2 && s.selected);
-        const activeSub = streams.find((s) => s.streamType === 3 && s.selected);
-        if (activeAudio) setSelectedAudio(activeAudio.id);
-        if (activeSub) setSelectedSub(activeSub.id);
+        // Only seed defaults from the server's "selected" streams when the
+        // Details page didn't already pre-select tracks.
+        if (!hasPreselect) {
+          const activeAudio = streams.find((s) => s.streamType === 2 && s.selected);
+          const activeSub = streams.find((s) => s.streamType === 3 && s.selected);
+          if (activeAudio) setSelectedAudio(activeAudio.id);
+          if (activeSub) setSelectedSub(activeSub.id);
+        }
       }
 
       // Detect next episode for TV shows
