@@ -55,21 +55,33 @@ jobs:
           ./tizen-installer --accept-license "$HOME/tizen-studio"
           rm tizen-installer
 
-      - name: Create signing certificate
-        if: steps.cache-tizen.outputs.cache-hit != 'true'
+      # Generate the author cert ONCE (only when the cached .p12 is absent) so
+      # the signing identity stays stable across builds. Then RE-REGISTER the
+      # profile and bake its passwords EVERY build — the cached profiles.xml /
+      # CLI registry isn't reliably reusable on its own (a cache-hit build that
+      # skipped this couldn't find the "Flixor" profile and packaging failed).
+      - name: Set up signing certificate + profile
         run: |
           TIZEN="$HOME/tizen-studio/tools/ide/bin/tizen"
-          "$TIZEN" certificate -a Flixor -p 1234 -c US -s California -ct SanFrancisco \
-            -o Flixor -n Flixor -e flixor@example.org -f flixor
-          "$TIZEN" security-profiles add -n Flixor \
-            -a "$HOME/tizen-studio-data/keystore/author/flixor.p12" -p 1234
+          P12="$HOME/tizen-studio-data/keystore/author/flixor.p12"
+          PXML="$HOME/tizen-studio-data/profile/profiles.xml"
+          DIST="$HOME/tizen-studio-data/tools/certificate-generator/certificates/distributor/tizen-distributor-signer.pwd"
 
-      # Point the CLI at the (possibly cached) profile every run — cheap and
-      # idempotent, and required because cli-config isn't part of the cache.
-      - name: Configure signing profile path
-        run: |
-          "$HOME/tizen-studio/tools/ide/bin/tizen" cli-config \
-            "profiles.path=$HOME/tizen-studio-data/profile/profiles.xml"
+          # Create the author cert only if we don't already have one cached.
+          if [ ! -f "$P12" ]; then
+            "$TIZEN" certificate -a Flixor -p 1234 -c US -s California -ct SanFrancisco \
+              -o Flixor -n Flixor -e flixor@example.org -f flixor
+          fi
+
+          # (Re)register the profile against the cert every run — idempotent.
+          "$TIZEN" security-profiles remove -n Flixor 2>/dev/null || true
+          "$TIZEN" security-profiles add -n Flixor -a "$P12" -p 1234
+          "$TIZEN" cli-config "profiles.path=$PXML"
+
+          # Bake the passwords into profiles.xml for non-interactive signing.
+          sed -i "s|$HOME/tizen-studio-data/keystore/author/flixor.pwd|1234|g" "$PXML"
+          sed -i "s|$DIST|tizenpkcs12passfordsigner|g" "$PXML"
+          sed -i 's|password=""|password="tizenpkcs12passfordsigner"|g' "$PXML"
 
       # --- Flixor web bundle (vite emits config.xml + icon at apps/tizen/dist root) ---
       - name: Install deps
@@ -82,16 +94,6 @@ jobs:
         run: npm run build -w flixor-tizen
 
       # --- Sign + package (non-interactive, via expect — same as jellyfin-avplay) ---
-      # Only needed when the cert was freshly created — on a cache hit the
-      # cached profiles.xml already has the passwords baked in.
-      - name: Prepare profile passwords for non-interactive signing
-        if: steps.cache-tizen.outputs.cache-hit != 'true'
-        run: |
-          PXML="$HOME/tizen-studio-data/profile/profiles.xml"
-          sed -i "s|$HOME/tizen-studio-data/keystore/author/flixor.pwd|1234|g" "$PXML"
-          sed -i "s|$HOME/tizen-studio-data/tools/certificate-generator/certificates/distributor/tizen-distributor-signer.pwd|tizenpkcs12passfordsigner|g" "$PXML"
-          sed -i 's|password=""|password="tizenpkcs12passfordsigner"|g' "$PXML"
-
       - name: Create expect script
         run: |
           cat > package.exp << 'EOF'
