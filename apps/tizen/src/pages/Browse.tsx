@@ -334,7 +334,7 @@ export function BrowsePage() {
             gridAutoFlow: "column",
             justifyContent: "start",
             alignItems: "center",
-            gap: "16px",
+            gridGap: "16px",
             margin: "20px 80px 0",
           }}
         >

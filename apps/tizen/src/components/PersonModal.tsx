@@ -176,7 +176,7 @@ function CreditRow({
             display: "grid",
             gridAutoFlow: "column",
             justifyContent: "start",
-            gap: 12,
+            gridGap: 12,
             overflowX: "auto",
             paddingBottom: 8,
           }}

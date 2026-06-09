@@ -17,7 +17,7 @@ export function AccessibilityBadges({ hasCC, hasSDH, hasAD }: AccessibilityBadge
   if (!hasCC && !hasSDH && !hasAD) return null;
 
   return (
-    <div style={{ display: "grid", gridAutoFlow: "column", justifyContent: "start", alignItems: "center", gap: 6 }}>
+    <div style={{ display: "grid", gridAutoFlow: "column", justifyContent: "start", alignItems: "center", gridGap: 6 }}>
       {hasCC && (
         <img
           src="/badges/cc.png"

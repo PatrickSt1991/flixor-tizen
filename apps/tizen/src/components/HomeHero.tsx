@@ -241,7 +241,7 @@ export function HomeHero({ item, onPlay, onMoreInfo }: HomeHeroProps) {
             padding: "24px 48px",
             display: "grid",
             justifyItems: "start",
-            gap: 10,
+            gridGap: 10,
           }}
         >
           {/* Logo or title */}
@@ -275,7 +275,7 @@ export function HomeHero({ item, onPlay, onMoreInfo }: HomeHeroProps) {
           )}
 
           {/* Meta badges */}
-          <div style={{ display: "grid", gridAutoFlow: "column", justifyContent: "start", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "grid", gridAutoFlow: "column", justifyContent: "start", alignItems: "center", gridGap: 8 }}>
             {item.year && (
               <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 14 }}>
                 {item.year}
@@ -321,7 +321,7 @@ export function HomeHero({ item, onPlay, onMoreInfo }: HomeHeroProps) {
           )}
 
           {/* Action buttons */}
-          <div style={{ display: "grid", gridAutoFlow: "column", justifyContent: "start", alignItems: "center", gap: 12, marginTop: 4 }}>
+          <div style={{ display: "grid", gridAutoFlow: "column", justifyContent: "start", alignItems: "center", gridGap: 12, marginTop: 4 }}>
             <button
               ref={playRef}
               onClick={() => onPlay?.()}
@@ -329,7 +329,7 @@ export function HomeHero({ item, onPlay, onMoreInfo }: HomeHeroProps) {
                 display: "inline-grid",
                 gridAutoFlow: "column",
                 alignItems: "center",
-                gap: 8,
+                gridGap: 8,
                 padding: "10px 28px",
                 borderRadius: 8,
                 border: playFocused
@@ -356,7 +356,7 @@ export function HomeHero({ item, onPlay, onMoreInfo }: HomeHeroProps) {
                 display: "inline-grid",
                 gridAutoFlow: "column",
                 alignItems: "center",
-                gap: 8,
+                gridGap: 8,
                 padding: "10px 28px",
                 borderRadius: 8,
                 border: infoFocused

@@ -36,7 +36,19 @@ function tizenFlexGapFallback(): PostcssPlugin {
           else if (d.prop === 'flex-wrap' && d.value.includes('wrap')) wrap = true
         })
         if (!gap && !rowGap && !colGap) return
-        if (!display || !/flex/.test(display)) return // grid keeps gap (Chrome 57+)
+        if (display && /grid/.test(display)) {
+          // GRID: the modern `gap`/`row-gap`/`column-gap` shorthands only work
+          // on a grid from Chrome 66; Chrome 47–65 need the `grid-*` names
+          // (still honored by modern browsers). Verified in Chromium 63:
+          // `gap` on a grid → 0px, `grid-gap` → applied. Rename in place.
+          rule.walkDecls((d) => {
+            if (d.prop === 'gap') d.prop = 'grid-gap'
+            else if (d.prop === 'row-gap') d.prop = 'grid-row-gap'
+            else if (d.prop === 'column-gap') d.prop = 'grid-column-gap'
+          })
+          return
+        }
+        if (!display || !/flex/.test(display)) return
         const parts = (gap || '').trim().split(/\s+/)
         const rg = rowGap || parts[0]
         const cg = colGap || parts[1] || parts[0]
