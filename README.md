@@ -15,6 +15,26 @@
 
 ---
 
+## 📺 Samsung Tizen TV Port
+
+This fork packages Flixor as a sideloadable **Samsung Tizen TV** app (`.wgt`),
+with the work needed to run on Tizen's Chromium-63 WebView: a Chrome-63 build
+pipeline, `.wgt` packaging/signing CI, direct-to-Plex auth on the TV, full
+D-pad spatial navigation, an on-screen PIN pad, and TV layout/CSS fixes.
+
+Flixor itself is created by the upstream **[Flixor project](https://github.com/Flixorui/flixor)**
+(via [lusky3/flixor-tizen](https://github.com/lusky3/flixor-tizen)). Please
+support the original authors too — their Ko-fi is `flixor`.
+
+### ☕ Support the Tizen port
+
+If the TV port is useful to you, you can support **the porting work** here
+(separate from the upstream project):
+
+<img src="apps/tizen/public/ko-fi-qr.webp" alt="Ko-fi donation QR code" width="160" />
+
+---
+
 ## About
 
 Flixor is a modern, cross-platform Plex client that brings a Netflix-like experience to your media library. Browse beautiful rows, see rich metadata with ratings from multiple sources, and enjoy powerful playback on any device.
