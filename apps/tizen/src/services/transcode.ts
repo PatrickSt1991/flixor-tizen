@@ -36,14 +36,22 @@ export async function startTranscode(
 
   const { mediaIndex = 0, audioStreamID, subtitleStreamID } = settings;
 
+  // Generate ONE session id shared by both the decision and the start request.
+  // Plex applies the subtitle-burn decision to a specific session; if the
+  // start.m3u8 plays a different session the subtitles never appear.
+  const sessionId = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+
   // Make transcode decision so Plex knows which streams to use
   await flixor.plexServer.makeTranscodeDecision(mediaKey, {
     audioStreamID,
     subtitleStreamID,
     mediaIndex,
+    sessionId,
+    maxVideoBitrate: settings.maxVideoBitrate,
+    videoResolution: settings.videoResolution,
   });
 
-  // Build transcode URL
+  // Build transcode URL (same session as the decision above)
   const result = flixor.plexServer.getTranscodeUrl(mediaKey, {
     maxVideoBitrate: settings.maxVideoBitrate,
     videoResolution: settings.videoResolution,
@@ -52,6 +60,7 @@ export async function startTranscode(
     subtitleStreamID,
     offset: settings.offset,
     mediaIndex,
+    sessionId,
   });
 
   // Start the transcode session on the server

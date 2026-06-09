@@ -45,6 +45,9 @@ describe("startTranscode", () => {
       audioStreamID: "201",
       subtitleStreamID: undefined,
       mediaIndex: 0,
+      sessionId: expect.any(String),
+      maxVideoBitrate: 8000,
+      videoResolution: "1920x1080",
     });
     expect(flixor.plexServer.getTranscodeUrl).toHaveBeenCalledWith("12345", {
       maxVideoBitrate: 8000,
@@ -54,7 +57,13 @@ describe("startTranscode", () => {
       subtitleStreamID: undefined,
       offset: undefined,
       mediaIndex: 0,
+      sessionId: expect.any(String),
     });
+    // The decision and the start request must share the SAME session, or Plex
+    // applies the subtitle-burn decision to a session that isn't played.
+    const decisionSession = (flixor.plexServer.makeTranscodeDecision as ReturnType<typeof vi.fn>).mock.calls[0][1].sessionId;
+    const urlSession = (flixor.plexServer.getTranscodeUrl as ReturnType<typeof vi.fn>).mock.calls[0][1].sessionId;
+    expect(decisionSession).toBe(urlSession);
     expect(flixor.plexServer.startTranscodeSession).toHaveBeenCalledWith(
       "http://plex/transcode/start.m3u8",
     );
@@ -116,6 +125,9 @@ describe("updateTranscode", () => {
       audioStreamID: undefined,
       subtitleStreamID: "301",
       mediaIndex: 0,
+      sessionId: expect.any(String),
+      maxVideoBitrate: 12000,
+      videoResolution: undefined,
     });
   });
 });

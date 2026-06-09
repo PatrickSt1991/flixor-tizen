@@ -735,22 +735,42 @@ export class PlexServerService {
       audioStreamID?: string;
       subtitleStreamID?: string;
       mediaIndex?: number; // Index of Media array (for multi-version support)
+      sessionId?: string; // MUST match the session used by getTranscodeUrl
+      maxVideoBitrate?: number;
+      videoResolution?: string;
     }
   ): Promise<void> {
     const mediaIndex = options?.mediaIndex ?? 0;
+    // The decision and the start.m3u8 request MUST carry the same `session`,
+    // otherwise Plex registers the chosen streams (incl. subtitle burn) against
+    // one session but transcodes/plays a different one — so burned subtitles
+    // silently never appear. Mirror the start request's core params here too.
     const params = new URLSearchParams({
+      hasMDE: '1',
       path: `/library/metadata/${ratingKey}`,
       mediaIndex: String(mediaIndex),
       partIndex: '0',
       protocol: 'hls',
+      fastSeek: '1',
       directPlay: '0',
       directStream: '0',
       directStreamAudio: '0',
+      videoQuality: '100',
+      videoResolution: options?.videoResolution ?? '1920x1080',
+      maxVideoBitrate: String(options?.maxVideoBitrate ?? 20000),
+      subtitleSize: '100',
+      audioBoost: '100',
+      location: 'lan',
+      autoAdjustQuality: '0',
       'X-Plex-Token': this.token,
       'X-Plex-Client-Identifier': this.clientId,
       'X-Plex-Product': 'Flixor Mobile',
       'X-Plex-Platform': 'iOS',
+      'X-Plex-Device': 'iPhone',
     });
+    if (options?.sessionId) {
+      params.set('session', options.sessionId);
+    }
 
     if (options?.audioStreamID) {
       params.set('audioStreamID', options.audioStreamID);
