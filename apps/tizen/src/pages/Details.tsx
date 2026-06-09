@@ -661,7 +661,7 @@ export function DetailsPage() {
                   display: "grid",
                   gridAutoFlow: "column",
                   justifyContent: "start",
-                  gap: 16,
+                  gridGap: 16,
                   overflowX: "auto",
                   padding: "16px 0",
                 }}

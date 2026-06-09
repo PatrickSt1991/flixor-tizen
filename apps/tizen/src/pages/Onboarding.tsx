@@ -234,7 +234,7 @@ const toggleStyles = {
   } as React.CSSProperties,
   labelBlock: {
     display: "grid",
-    gap: 4,
+    gridGap: 4,
     flex: 1,
   } as React.CSSProperties,
   label: {
@@ -541,7 +541,7 @@ const pageStyles = {
     display: "grid",
     gridAutoFlow: "column",
     justifyContent: "start",
-    gap: 12,
+    gridGap: 12,
     marginBottom: 32,
   } as React.CSSProperties,
   dot: {
@@ -560,7 +560,7 @@ const pageStyles = {
     display: "grid",
     gridAutoFlow: "column",
     justifyContent: "center",
-    gap: 20,
+    gridGap: 20,
     paddingBottom: 60,
   } as React.CSSProperties,
 } as const;
@@ -593,7 +593,7 @@ const slideStyles = {
   } as React.CSSProperties,
   toggleGroup: {
     display: "grid",
-    gap: 16,
+    gridGap: 16,
     width: "100%",
     maxWidth: 560,
     marginTop: 24,

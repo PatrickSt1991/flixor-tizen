@@ -76,7 +76,7 @@ export function Billboard({
           bottom: 0,
           padding: "24px 32px",
           display: "grid",
-          gap: 10,
+          gridGap: 10,
         }}
       >
         {/* Title */}
@@ -114,7 +114,7 @@ export function Billboard({
         )}
 
         {/* Play button + content rating badge */}
-        <div style={{ display: "grid", gridAutoFlow: "column", justifyContent: "start", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "grid", gridAutoFlow: "column", justifyContent: "start", alignItems: "center", gridGap: 12 }}>
           <button
             ref={ref}
             onClick={() => onPlay?.()}
@@ -122,7 +122,7 @@ export function Billboard({
               display: "inline-grid",
               gridAutoFlow: "column",
               alignItems: "center",
-              gap: 8,
+              gridGap: 8,
               padding: "10px 24px",
               borderRadius: 8,
               border: focused

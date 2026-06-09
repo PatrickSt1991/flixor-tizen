@@ -43,7 +43,7 @@ export function UserAvatar({ thumb, title, onPress }: UserAvatarProps) {
         display: "grid",
         gridAutoFlow: "column",
         alignItems: "center",
-        gap: 10,
+        gridGap: 10,
         padding: 4,
         background: "transparent",
         border: focused ? "3px solid #ff4b2b" : "3px solid transparent",
