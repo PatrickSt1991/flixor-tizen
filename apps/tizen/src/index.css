@@ -149,10 +149,12 @@ input:focus,
 
 /* Navigation */
 .tv-nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  /* In normal flow (NOT fixed). A fixed nav sits at viewport-top for
+     spatial-navigation geometry, so pressing UP from any content row jumped
+     straight to the menu instead of the row above. In flow, the nav is only
+     "above" the hero, so UP walks row→row→hero→nav. It scrolls away with the
+     page (standard TV behavior); reveal it by going up to the top. */
+  position: relative;
   height: 120px;
   padding: 0 80px;
   display: flex;
@@ -340,7 +342,11 @@ input:focus,
 .tv-row {
   display: flex;
   gap: 25px;
-  padding: 20px 0;
+  /* Generous vertical padding: the row is an overflow-x scroller (so
+     overflow-y computes to clip), and a focused card scales 1.15 (+~27px per
+     side on a 360px poster) plus its focus ring. Without the room the
+     highlighted poster gets clipped top/bottom ("falls off"). */
+  padding: 40px 0;
   /* The row must be its own horizontal scroller: with visible overflow,
      scrollIntoView(inline:center) scrolled the PAGE container sideways
      (hidden overflow is still programmatically scrollable), shifting the
@@ -814,7 +820,9 @@ input:focus,
 }
 
 .pt-nav {
-  padding-top: 120px;
+  /* The nav is now in normal flow and occupies its own 120px at the top of
+     the container, so no extra top padding is needed. */
+  padding-top: 0;
 }
 
 @keyframes spin {
