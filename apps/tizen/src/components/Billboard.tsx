@@ -39,7 +39,7 @@ export function Billboard({
     >
       {/* Backdrop image */}
       {backdropUrl ? (
-        <div style={{ position: "absolute", inset: 0 }}>
+        <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}>
           <SmartImage
             src={backdropUrl}
             alt={title}
@@ -51,7 +51,7 @@ export function Billboard({
         <div
           style={{
             position: "absolute",
-            inset: 0,
+            top: 0, right: 0, bottom: 0, left: 0,
             background: "#222",
           }}
         />
@@ -61,7 +61,7 @@ export function Billboard({
       <div
         style={{
           position: "absolute",
-          inset: 0,
+          top: 0, right: 0, bottom: 0, left: 0,
           background:
             "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.95) 100%)",
         }}

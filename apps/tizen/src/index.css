@@ -681,7 +681,9 @@ input:focus,
 }
 
 .episode-card {
-  background: rgba(255, 255, 255, 0.03);
+  /* Solid card — was rgba(255,255,255,0.03), invisible over the dark page
+     backdrop, so episodes looked like floating red text on the TV. */
+  background: #1a1a1d;
   border: 2px solid transparent;
   border-radius: 12px;
   overflow: hidden;
@@ -690,10 +692,11 @@ input:focus,
   text-align: left;
 }
 
-.episode-card:focus {
+.episode-card:focus,
+.episode-card.spatial-focused {
   border-color: #ff4b2b;
   transform: scale(1.05);
-  background: rgba(255, 255, 255, 0.08);
+  background: #232327;
 }
 
 .episode-thumb-container {
@@ -701,6 +704,17 @@ input:focus,
   /* 16/9 via padding hack — aspect-ratio is Chrome 88+, Tizen WebViews drop it */
   height: 0;
   padding-top: 56.25%;
+  background: #0e0e10;
+}
+
+/* Shown when an episode has no thumbnail — was unstyled (transparent). */
+.episode-thumb-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #2a2a30, #15151a);
 }
 
 .episode-thumb {
