@@ -10,6 +10,7 @@ import { TrackPicker } from "../components/TrackPicker";
 import { getAudioOptions, getSubtitleOptions } from "../services/streamDecision";
 import type {
   PlexMediaItem,
+  PlexStream,
   TMDBMedia,
   TMDBMovieDetails,
   TMDBTVDetails,
@@ -580,30 +581,55 @@ export function DetailsPage() {
     [seasons],
   );
 
-  // Movie audio/subtitle tracks for pre-Play selection.
-  const movieStreams = useMemo(
-    () =>
-      item?.type === "movie"
-        ? (item.Media?.[selectedMedia]?.Part?.[0]?.Stream ?? [])
-        : [],
-    [item, selectedMedia],
-  );
+  // Streams of whatever Play will start: the movie itself (already loaded), or
+  // — for a show — the on-deck / first episode (fetched, since a show's
+  // metadata doesn't carry per-episode streams).
+  const [targetStreams, setTargetStreams] = useState<PlexStream[]>([]);
+  const playEpisodeKey =
+    item?.type === "show"
+      ? (onDeckEpisode?.ratingKey ??
+        (episodes.length > 0 ? episodes[0].ratingKey : null))
+      : null;
+
+  useEffect(() => {
+    if (item?.type === "movie") {
+      setTargetStreams(item.Media?.[selectedMedia]?.Part?.[0]?.Stream ?? []);
+      return;
+    }
+    if (item?.type === "show" && playEpisodeKey) {
+      let cancelled = false;
+      flixor.plexServer
+        .getMetadata(playEpisodeKey)
+        .then((ep) => {
+          if (!cancelled)
+            setTargetStreams(ep?.Media?.[0]?.Part?.[0]?.Stream ?? []);
+        })
+        .catch(() => {
+          if (!cancelled) setTargetStreams([]);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+    setTargetStreams([]);
+  }, [item, selectedMedia, playEpisodeKey]);
+
   const preAudioTracks = useMemo(() => {
-    const ids = getAudioOptions(movieStreams);
-    return movieStreams.filter((s) => ids.some((t) => t.id === s.id));
-  }, [movieStreams]);
+    const ids = getAudioOptions(targetStreams);
+    return targetStreams.filter((s) => ids.some((t) => t.id === s.id));
+  }, [targetStreams]);
   const preSubTracks = useMemo(() => {
-    const ids = getSubtitleOptions(movieStreams);
-    return movieStreams.filter((s) => ids.some((t) => t.id === s.id));
-  }, [movieStreams]);
+    const ids = getSubtitleOptions(targetStreams);
+    return targetStreams.filter((s) => ids.some((t) => t.id === s.id));
+  }, [targetStreams]);
 
   // Default the pre-selection to the server's currently-selected streams.
   useEffect(() => {
-    const a = movieStreams.find((s) => s.streamType === 2 && s.selected);
-    const sub = movieStreams.find((s) => s.streamType === 3 && s.selected);
+    const a = targetStreams.find((s) => s.streamType === 2 && s.selected);
+    const sub = targetStreams.find((s) => s.streamType === 3 && s.selected);
     setPreAudio(a ? a.id : null);
     setPreSub(sub ? sub.id : null);
-  }, [movieStreams]);
+  }, [targetStreams]);
 
   // Build tabs
   const tabs = useMemo(() => {
@@ -981,11 +1007,10 @@ export function DetailsPage() {
                       navigate(`/player/${playTarget}`, {
                         state: {
                           mediaIndex: selectedMedia,
-                          // Pass the pre-selected movie tracks to the player.
-                          audioStreamID:
-                            item.type === "movie" ? preAudio : undefined,
-                          subtitleStreamID:
-                            item.type === "movie" ? preSub : undefined,
+                          // Pre-selected tracks (movie, or the show's first/
+                          // on-deck episode) — applied by the player up front.
+                          audioStreamID: preAudio,
+                          subtitleStreamID: preSub,
                         },
                       })
                     }
