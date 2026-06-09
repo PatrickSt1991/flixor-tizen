@@ -8,10 +8,11 @@ interface NavButtonProps {
   label: string;
   active: boolean;
   onPress: () => void;
+  focusKey: string;
 }
 
-function NavButton({ label, active, onPress }: NavButtonProps) {
-  const { ref, focused } = useFocusable({ onEnterPress: onPress });
+function NavButton({ label, active, onPress, focusKey }: NavButtonProps) {
+  const { ref, focused } = useFocusable({ focusKey, onEnterPress: onPress });
 
   return (
     <button
@@ -37,9 +38,28 @@ export function TopNav() {
     () => flixor.currentProfile?.thumb,
   );
 
+  // Which nav item is active for the current route — so entering the nav from
+  // below lands on it (e.g. up from the Shows grid → "Shows", not "Home").
+  const activeNavKey =
+    currentPath.includes("/library/movie")
+      ? "nav-movies"
+      : currentPath.includes("/library/show")
+        ? "nav-shows"
+        : currentPath === "/mylist"
+          ? "nav-mylist"
+          : currentPath === "/new-popular"
+            ? "nav-newpopular"
+            : currentPath === "/search"
+              ? "nav-search"
+              : currentPath === "/settings"
+                ? "nav-settings"
+                : "nav-home";
+
   const { ref: navRef, focusKey } = useFocusable({
     focusKey: "top-nav",
     trackChildren: true,
+    // When focus enters the nav, prefer the active item over the first child.
+    preferredChildFocusKey: activeNavKey,
     // Left/right cycle the menu only; Down leaves toward the page content.
     isFocusBoundary: true,
     focusBoundaryDirections: ["left", "right"],
@@ -73,36 +93,43 @@ export function TopNav() {
       <div className="nav-items">
         <NavButton
           label="Home"
+          focusKey="nav-home"
           active={currentPath === "/"}
           onPress={() => navigate("/")}
         />
         <NavButton
           label="My List"
+          focusKey="nav-mylist"
           active={currentPath === "/mylist"}
           onPress={() => navigate("/mylist")}
         />
         <NavButton
           label="New & Popular"
+          focusKey="nav-newpopular"
           active={currentPath === "/new-popular"}
           onPress={() => navigate("/new-popular")}
         />
         <NavButton
           label="Movies"
+          focusKey="nav-movies"
           active={currentPath.includes("/library/movie")}
           onPress={() => navigate("/library/movie")}
         />
         <NavButton
           label="Shows"
+          focusKey="nav-shows"
           active={currentPath.includes("/library/show")}
           onPress={() => navigate("/library/show")}
         />
         <NavButton
           label="Search"
+          focusKey="nav-search"
           active={currentPath === "/search"}
           onPress={() => navigate("/search")}
         />
         <NavButton
           label="⚙ Settings"
+          focusKey="nav-settings"
           active={currentPath === "/settings"}
           onPress={() => navigate("/settings")}
         />

@@ -744,6 +744,7 @@ input:focus,
 
 .episode-info {
   padding: 15px;
+  background: #1a1a1d;
 }
 
 .episode-number {
@@ -756,9 +757,23 @@ input:focus,
 .episode-title {
   font-size: 18px;
   font-weight: 600;
+  color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Was unstyled → effectively invisible. Light, clamped to ~3 lines. */
+.episode-summary {
+  margin-top: 6px;
+  font-size: 15px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.6);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* Player Overlay */
