@@ -2,6 +2,7 @@ import { useEffect, useCallback } from "react";
 import {
   useFocusable,
   FocusContext,
+  setFocus,
 } from "@noriginmedia/norigin-spatial-navigation";
 import type { PlexStream } from "@flixor/core";
 import { scrollFocusedIntoView } from "../utils/tvScroll";
@@ -16,6 +17,13 @@ export interface TrackPickerProps {
   onClose: () => void;
   /** Show an "Off" option at the top (useful for subtitles) */
   showOff?: boolean;
+  /**
+   * Focus key to restore focus to when the picker closes. Without this the
+   * picker's focused row unmounts and norigin is left with nothing focused, so
+   * the D-pad goes dead until the user blindly finds something. Point this at
+   * the button that opened the picker.
+   */
+  returnFocusKey?: string;
 }
 
 function TrackItem({
@@ -64,6 +72,7 @@ export function TrackPicker({
   onSelect,
   onClose,
   showOff = false,
+  returnFocusKey,
 }: TrackPickerProps) {
   // trackChildren is required: without it, focusSelf() focuses the (non-
   // selectable) list container and — because it's also a focus boundary —
@@ -74,11 +83,15 @@ export function TrackPicker({
     trackChildren: true,
   });
 
-  // Focus the first track on mount (delegated via trackChildren).
+  // Focus the first track on mount (delegated via trackChildren). On unmount,
+  // hand focus back to the element that opened us so the remote keeps working.
   useEffect(() => {
     const t = setTimeout(() => focusSelf(), 50);
-    return () => clearTimeout(t);
-  }, [focusSelf]);
+    return () => {
+      clearTimeout(t);
+      if (returnFocusKey) setFocus(returnFocusKey);
+    };
+  }, [focusSelf, returnFocusKey]);
 
   // Close on Back key (Tizen 10009) or Escape
   const handleKeyDown = useCallback(
