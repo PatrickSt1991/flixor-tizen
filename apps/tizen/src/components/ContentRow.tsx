@@ -5,7 +5,6 @@ import {
   FocusContext,
 } from "@noriginmedia/norigin-spatial-navigation";
 import { MediaCard } from "./MediaCard";
-import { scrollFocusedIntoView } from "../utils/tvScroll";
 import type { PlexMediaItem } from "@flixor/core";
 
 type CardVariant = "landscape" | "poster" | "continue";
@@ -30,19 +29,13 @@ function FocusableCard({
   onItemClick: (item: PlexMediaItem) => void;
   onItemFocus?: (item: PlexMediaItem) => void;
 }) {
-  const { ref, focused } = useFocusable({
-    onEnterPress: () => onItemClick(item),
-    onFocus: () => {
-      onItemFocus?.(item);
-      scrollFocusedIntoView(ref.current as HTMLElement | null);
-    },
-  });
-
+  // Plain wrapper — NOT focusable. MediaCard's leaf card (PosterCard /
+  // LandscapeCard / ContinueCard) is the norigin focusable; it scrolls itself
+  // into view and reports focus via onFocus. A focusable here too meant two
+  // focusables per card, which norigin resolved inconsistently by direction
+  // (down → card, up → wrapper) so up lost the highlight. The card owns focus.
   return (
-    <div
-      ref={ref}
-      className={`focusable-card-wrapper${focused ? " focused" : ""}`}
-    >
+    <div className="focusable-card-wrapper">
       <MediaCard
         item={item}
         variant={variant}
