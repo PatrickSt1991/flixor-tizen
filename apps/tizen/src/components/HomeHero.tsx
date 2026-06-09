@@ -162,7 +162,7 @@ export function HomeHero({ item, onPlay, onMoreInfo }: HomeHeroProps) {
           <div
             style={{
               position: "absolute",
-              inset: 0,
+              top: 0, right: 0, bottom: 0, left: 0,
               opacity: showVideo ? 0 : 1,
               transition: "opacity 1s ease",
             }}
@@ -178,7 +178,7 @@ export function HomeHero({ item, onPlay, onMoreInfo }: HomeHeroProps) {
 
         {/* Video layer — Plex direct */}
         {showVideo && item.videoUrl && (
-          <div style={{ position: "absolute", inset: 0, opacity: 0.6 }}>
+          <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, opacity: 0.6 }}>
             <video
               ref={videoRef}
               src={item.videoUrl}
@@ -198,7 +198,7 @@ export function HomeHero({ item, onPlay, onMoreInfo }: HomeHeroProps) {
 
         {/* Video layer — YouTube embed */}
         {showVideo && !item.videoUrl && item.ytKey && (
-          <div style={{ position: "absolute", inset: 0, opacity: 0.6 }}>
+          <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, opacity: 0.6 }}>
             <iframe
               title="Trailer"
               src={`https://www.youtube.com/embed/${item.ytKey}?autoplay=1&mute=${muted ? 1 : 0}&controls=0&loop=0&playsinline=1&rel=0&showinfo=0&modestbranding=1&enablejsapi=1`}
@@ -217,7 +217,7 @@ export function HomeHero({ item, onPlay, onMoreInfo }: HomeHeroProps) {
         <div
           style={{
             position: "absolute",
-            inset: 0,
+            top: 0, right: 0, bottom: 0, left: 0,
             background:
               "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 40%, transparent 100%)",
           }}
@@ -225,7 +225,7 @@ export function HomeHero({ item, onPlay, onMoreInfo }: HomeHeroProps) {
         <div
           style={{
             position: "absolute",
-            inset: 0,
+            top: 0, right: 0, bottom: 0, left: 0,
             background:
               "linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 40%, transparent 100%)",
           }}

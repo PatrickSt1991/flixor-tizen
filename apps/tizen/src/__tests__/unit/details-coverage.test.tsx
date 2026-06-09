@@ -496,7 +496,7 @@ describe("DetailsPage – TV show paths", () => {
 
     await act(async () => { render(<DetailsPage />); });
     fireEvent.click(screen.getByText(/Continue S1:E3/));
-    expect(mockNavigate).toHaveBeenCalledWith("/player/ep3");
+    expect(mockNavigate).toHaveBeenCalledWith("/player/ep3", expect.anything());
   });
 
   it("renders Episodes tab for TV show", async () => {
@@ -559,7 +559,7 @@ describe("DetailsPage – TV show paths", () => {
 
     await act(async () => { render(<DetailsPage />); });
     fireEvent.click(screen.getByText("▶ Play S1:E1"));
-    expect(mockNavigate).toHaveBeenCalledWith("/player/ep1");
+    expect(mockNavigate).toHaveBeenCalledWith("/player/ep1", expect.anything());
   });
 
   it("handles metadata fetch failure gracefully", async () => {

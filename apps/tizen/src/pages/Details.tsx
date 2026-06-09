@@ -914,42 +914,58 @@ export function DetailsPage() {
 
           {/* Action buttons */}
           <div className="hero-actions">
-            {item.type === "movie" ? (
-              <FocusableButton
-                className="btn-primary"
-                focusKey="details-play"
-                focusOnMount
-                onClick={() =>
-                  navigate(`/player/${item.ratingKey}`, {
-                    state: { mediaIndex: selectedMedia },
-                  })
-                }
-              >
-                {resumeLabel ? `▶ Resume · ${resumeLabel}` : "▶ Play"}
-              </FocusableButton>
-            ) : onDeckEpisode ? (
-              <FocusableButton
-                className="btn-primary"
-                focusKey="details-play"
-                focusOnMount
-                onClick={() => navigate(`/player/${onDeckEpisode.ratingKey}`)}
-              >
-                ▶ Continue S{onDeckEpisode.parentIndex || "?"}:E
-                {onDeckEpisode.index || "?"}
-              </FocusableButton>
-            ) : (
-              <FocusableButton
-                className="btn-primary"
-                focusKey="details-play"
-                focusOnMount
-                onClick={() => {
-                  if (episodes.length > 0)
-                    navigate(`/player/${episodes[0].ratingKey}`);
-                }}
-              >
-                ▶ Play S1:E1
-              </FocusableButton>
-            )}
+            {(() => {
+              // Resolve a real, playable Plex ratingKey. Items reached via the
+              // hero's "More Info" can be TMDB-only (ratingKey "tmdb-…") with no
+              // Plex match — those have nothing to play, so the Play button used
+              // to silently do nothing. Only show Play when there's a target.
+              const isTmdb = item.ratingKey.startsWith("tmdb-");
+              const playTarget =
+                item.type === "movie"
+                  ? isTmdb
+                    ? null
+                    : item.ratingKey
+                  : (onDeckEpisode?.ratingKey ??
+                    (episodes.length > 0 ? episodes[0].ratingKey : null));
+              const playLabel =
+                item.type === "movie"
+                  ? resumeLabel
+                    ? `▶ Resume · ${resumeLabel}`
+                    : "▶ Play"
+                  : onDeckEpisode
+                    ? `▶ Continue S${onDeckEpisode.parentIndex || "?"}:E${onDeckEpisode.index || "?"}`
+                    : "▶ Play S1:E1";
+
+              if (playTarget) {
+                return (
+                  <FocusableButton
+                    className="btn-primary"
+                    focusKey="details-play"
+                    focusOnMount
+                    onClick={() =>
+                      navigate(`/player/${playTarget}`, {
+                        state: { mediaIndex: selectedMedia },
+                      })
+                    }
+                  >
+                    {playLabel}
+                  </FocusableButton>
+                );
+              }
+
+              // Not in the Plex library — nothing to play. Keep a focusable
+              // anchor (initial focus) and tell the user instead of no-op-ing.
+              return (
+                <FocusableButton
+                  className="btn-secondary"
+                  focusKey="details-play"
+                  focusOnMount
+                  onClick={() => {}}
+                >
+                  Not in your library
+                </FocusableButton>
+              );
+            })()}
 
             {plexTrailer && (
               <FocusableButton

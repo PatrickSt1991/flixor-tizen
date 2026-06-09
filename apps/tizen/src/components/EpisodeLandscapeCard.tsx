@@ -52,7 +52,7 @@ export function EpisodeLandscapeCard({
     >
       {/* Thumbnail */}
       {thumbnailUrl ? (
-        <div style={{ position: "absolute", inset: 0 }}>
+        <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}>
           <SmartImage
             src={thumbnailUrl}
             alt={title}
@@ -64,7 +64,7 @@ export function EpisodeLandscapeCard({
         <div
           style={{
             position: "absolute",
-            inset: 0,
+            top: 0, right: 0, bottom: 0, left: 0,
             background: "#333",
           }}
         />
@@ -74,7 +74,7 @@ export function EpisodeLandscapeCard({
       <div
         style={{
           position: "absolute",
-          inset: 0,
+          top: 0, right: 0, bottom: 0, left: 0,
           background:
             "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 50%, transparent 100%)",
         }}
