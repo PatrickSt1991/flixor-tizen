@@ -44,23 +44,6 @@ const ratingColors: Record<string, ColorSet> = {
   "TV-MA": red,
 };
 
-/** Image-based rating types that have PNG assets in /badges/ */
-type ImageRatingType = "g" | "pg" | "pg13" | "r" | "tvg" | "tvpg" | "tv14" | "tvma" | "unrated";
-
-const ratingImageMap: Record<string, ImageRatingType> = {
-  G: "g",
-  PG: "pg",
-  "PG-13": "pg13",
-  R: "r",
-  "TV-G": "tvg",
-  "TV-PG": "tvpg",
-  "TV-14": "tv14",
-  "TV-MA": "tvma",
-  NR: "unrated",
-  UNRATED: "unrated",
-};
-
-const sizeHeight: Record<string, number> = { sm: 14, md: 22, lg: 28 };
 const textSize: Record<string, { fontSize: number; px: number; py: number }> = {
   sm: { fontSize: 9, px: 4, py: 1 },
   md: { fontSize: 12, px: 8, py: 3 },
@@ -75,25 +58,14 @@ export default function ContentRatingBadge({
   if (!rating) return null;
 
   const normalized = normalizeRating(rating);
-  const imageType = ratingImageMap[normalized];
 
-  // Prefer image badge when asset exists
-  if (imageType) {
-    return (
-      <img
-        // Relative to the document (BASE_URL = "./"), NOT root-absolute:
-        // "/badges/..." resolves to file:///badges/... on the TV's local
-        // scheme and fails to load. import.meta.env.BASE_URL keeps it relative.
-        src={`${import.meta.env.BASE_URL}badges/${imageType}.png`}
-        alt={normalized}
-        className={className}
-        style={{ height: sizeHeight[size], width: "auto", objectFit: "contain" }}
-        loading="lazy"
-      />
-    );
-  }
+  // NOTE: always render the colored text pill. The image badges
+  // (badges/r.png, pg13.png, …) were never shipped — only the
+  // accessibility badges (cc/sdh/ad) exist — so the <img> path produced
+  // "load failed" errors on the TV for every rating. The text pill needs no
+  // assets and looks the same across ratings.
 
-  // Fallback: colored text pill
+  // Colored text pill
   const colors = ratingColors[normalized] || gray;
   const ts = textSize[size];
 

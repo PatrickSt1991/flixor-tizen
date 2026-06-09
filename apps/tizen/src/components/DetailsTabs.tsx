@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
+import { scrollFocusedIntoView } from '../utils/tvScroll';
 
 export interface DetailsTab {
   label: string;
@@ -21,7 +22,10 @@ function TabButton({
   active: boolean;
   onSelect: () => void;
 }) {
-  const { ref, focused } = useFocusable({ onEnterPress: onSelect });
+  const { ref, focused } = useFocusable({
+    onEnterPress: onSelect,
+    onFocus: () => scrollFocusedIntoView(ref.current as HTMLElement | null),
+  });
 
   return (
     <button

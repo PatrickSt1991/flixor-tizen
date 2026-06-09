@@ -1,5 +1,6 @@
 import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
 import { SmartImage } from './SmartImage';
+import { scrollFocusedIntoView } from '../utils/tvScroll';
 
 export interface EpisodeItemProps {
   title: string;
@@ -22,7 +23,10 @@ export function EpisodeItem({
   watched,
   onClick,
 }: EpisodeItemProps) {
-  const { ref, focused } = useFocusable({ onEnterPress: onClick });
+  const { ref, focused } = useFocusable({
+    onEnterPress: onClick,
+    onFocus: () => scrollFocusedIntoView(ref.current as HTMLElement | null),
+  });
 
   const formattedDuration = duration ? `${Math.round(duration / 60000)}m` : null;
 
