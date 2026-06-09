@@ -28,9 +28,8 @@ export interface VirtualGridProps<T extends VirtualGridItem> {
 }
 
 import { computeLayout } from "../utils/virtualGridUtils";
-import { scrollFocusedIntoView } from "../utils/tvScroll";
 
-function FocusableGridItem<T extends VirtualGridItem>({
+function GridItem<T extends VirtualGridItem>({
   item,
   style,
   render,
@@ -39,21 +38,13 @@ function FocusableGridItem<T extends VirtualGridItem>({
   style: React.CSSProperties;
   render: (item: T) => JSX.Element;
 }) {
-  const { ref, focused } = useFocusable({
-    focusKey: `virtual-grid-item-${item.id}`,
-    // Same deterministic centring as the rows. The old edge-triggered
-    // scrollBy lagged a keypress behind (it measured stale rects against
-    // the virtualized container) — the symptom was "press down, focus
-    // moves but the grid doesn't scroll until you press up again".
-    onFocus: () => scrollFocusedIntoView(ref.current as HTMLElement | null),
-  });
-
+  // Plain positioning wrapper — NOT focusable. The rendered card is itself a
+  // norigin focusable; making this a focusable too created two focusables per
+  // cell, and norigin resolved them inconsistently by direction (down landed
+  // on the card, up landed on this wrapper) — so up lost the card focus and
+  // the grid scrolled with nothing highlighted. The card scrolls itself.
   return (
-    <div
-      ref={ref}
-      style={style}
-      className={`virtual-grid-item${focused ? " spatial-focused" : ""}`}
-    >
+    <div style={style} className="virtual-grid-item">
       {render(item)}
     </div>
   );
@@ -248,7 +239,7 @@ export function VirtualGrid<T extends VirtualGridItem>({
           }}
         >
           {visibleItems.map(({ item, style, key }) => (
-            <FocusableGridItem
+            <GridItem
               key={key}
               item={item}
               style={style}
