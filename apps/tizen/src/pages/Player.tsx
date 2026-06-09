@@ -444,6 +444,21 @@ export function PlayerPage() {
     }
   }, [showControls]);
 
+  // While a track/version picker is open, cancel the 5s auto-hide of the
+  // controls overlay (the overlay is already visible — the user opened the
+  // picker from it). Otherwise the overlay, and the button we hand focus back
+  // to when the picker closes, can vanish out from under the picker, leaving
+  // the D-pad dead after a selection.
+  useEffect(() => {
+    if (
+      (showAudioPicker || showSubPicker || showVersionPicker) &&
+      controlsTimeout.current
+    ) {
+      globalThis.clearTimeout(controlsTimeout.current);
+      controlsTimeout.current = null;
+    }
+  }, [showAudioPicker, showSubPicker, showVersionPicker]);
+
   const handleTrackChange = async (type: "audio" | "subtitle", streamId: number | null) => {
     if (!ratingKey) return;
     const nextAudio = type === "audio" ? streamId : selectedAudio;
@@ -612,6 +627,7 @@ export function PlayerPage() {
             setShowAudioPicker(false);
           }}
           onClose={() => setShowAudioPicker(false)}
+          returnFocusKey="player-audio-btn"
         />
       )}
 
@@ -627,6 +643,7 @@ export function PlayerPage() {
           }}
           onClose={() => setShowSubPicker(false)}
           showOff
+          returnFocusKey="player-sub-btn"
         />
       )}
 
@@ -722,6 +739,7 @@ export function PlayerPage() {
             {/* Audio track picker trigger */}
             <FocusableButton
               className="track-group-btn"
+              focusKey="player-audio-btn"
               onClick={() => setShowAudioPicker(true)}
             >
               Audio: {audioTracks.find((t) => t.id === selectedAudio)?.language || "Default"}
@@ -730,6 +748,7 @@ export function PlayerPage() {
             {/* Subtitle track picker trigger */}
             <FocusableButton
               className="track-group-btn"
+              focusKey="player-sub-btn"
               onClick={() => setShowSubPicker(true)}
             >
               Subtitles: {selectedSub === null ? "Off" : subtitleTracks.find((t) => t.id === selectedSub)?.language || "On"}

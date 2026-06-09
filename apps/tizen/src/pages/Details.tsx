@@ -1038,6 +1038,7 @@ export function DetailsPage() {
             {preAudioTracks.length > 1 && (
               <FocusableButton
                 className="btn-secondary"
+                focusKey="details-audio-btn"
                 onClick={() => setShowAudioPicker(true)}
               >
                 Audio: {preAudioTracks.find((t) => t.id === preAudio)?.language || "Default"}
@@ -1046,6 +1047,7 @@ export function DetailsPage() {
             {preSubTracks.length > 0 && (
               <FocusableButton
                 className="btn-secondary"
+                focusKey="details-sub-btn"
                 onClick={() => setShowSubPicker(true)}
               >
                 Subtitles: {preSub === null ? "Off" : preSubTracks.find((t) => t.id === preSub)?.language || "On"}
@@ -1148,6 +1150,7 @@ export function DetailsPage() {
             setShowAudioPicker(false);
           }}
           onClose={() => setShowAudioPicker(false)}
+          returnFocusKey="details-audio-btn"
         />
       )}
 
@@ -1163,6 +1166,7 @@ export function DetailsPage() {
           }}
           onClose={() => setShowSubPicker(false)}
           showOff
+          returnFocusKey="details-sub-btn"
         />
       )}
     </div>

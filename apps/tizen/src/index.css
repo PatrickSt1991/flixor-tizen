@@ -795,7 +795,35 @@ input:focus,
 
 .player-tracks {
   display: flex;
+  /* Align to the bottom: the Quality group is a tall vertical list, and the
+     default align-items:stretch was stretching every sibling button to match
+     its height (the giant white bars in the pause overlay). flex-end keeps the
+     buttons their natural size, sitting on the control-bar baseline. */
+  align-items: flex-end;
   gap: 60px;
+  padding: 0 24px 32px;
+}
+
+/* The picker-trigger / play-pause buttons (Play, Version, Audio, Subtitles,
+   Speed) — class track-group-btn. These had NO CSS, so they rendered as
+   default white buttons and got stretched tall by the flex row. */
+.track-group-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid transparent;
+  color: #fff;
+  padding: 14px 22px;
+  border-radius: 10px;
+  font-size: 20px;
+  font-family: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+}
+
+.track-group-btn.focused {
+  background: #ff4b2b;
+  border-color: #fff;
+  transform: scale(1.05);
 }
 
 .track-group h3 {
@@ -821,7 +849,10 @@ input:focus,
   background: #ff4b2b;
 }
 
-.track-btn:focus {
+/* norigin uses virtual focus and never calls element.focus(), so :focus never
+   fires on TV — the .focused class (set by FocusableButton) is what highlights. */
+.track-btn:focus,
+.track-btn.focused {
   background: white;
   color: black;
   transform: scale(1.05);
