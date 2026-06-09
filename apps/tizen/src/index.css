@@ -342,11 +342,15 @@ input:focus,
 .tv-row {
   display: flex;
   gap: 25px;
-  /* Generous vertical padding: the row is an overflow-x scroller (so
-     overflow-y computes to clip), and a focused card scales 1.15 (+~27px per
-     side on a 360px poster) plus its focus ring. Without the room the
-     highlighted poster gets clipped top/bottom ("falls off"). */
-  padding: 40px 0;
+  /* The row is an overflow-x scroller, so overflow-y computes to clip and the
+     padding box is also the horizontal clip edge. A focused card scales 1.15
+     (+~27px per side on a 360px poster) plus its ring, so it needs room on ALL
+     sides or it gets clipped — vertically ("falls off") and, for the FIRST
+     card, on the left. 40px padding gives that room; the negative horizontal
+     margin pulls the scroller back so cards still line up with the row title
+     (the section already insets content by 80px on the left). */
+  padding: 40px 40px;
+  margin: 0 -40px;
   /* The row must be its own horizontal scroller: with visible overflow,
      scrollIntoView(inline:center) scrolled the PAGE container sideways
      (hidden overflow is still programmatically scrollable), shifting the

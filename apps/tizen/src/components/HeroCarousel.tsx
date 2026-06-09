@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useFocusable } from "@noriginmedia/norigin-spatial-navigation";
 import { flixor } from "../services/flixor";
 import { loadSettings } from "../services/settings";
-import { scrollFocusedIntoView } from "../utils/tvScroll";
 import type { PlexMediaItem } from "@flixor/core";
 
 interface HeroCarouselProps {
@@ -23,15 +22,24 @@ export function HeroCarousel({ items, onBackdropChange }: HeroCarouselProps) {
   // even a tight one — gets targeted when navigating UP from the first row
   // instead of delegating to Play (norigin picks the nearest focusable, and a
   // container competes with its own child). The Play/More-Info buttons are the
-  // only focusables here; they scroll the page to reveal the hero on focus
-  // (without that, focus reached Play but the page never scrolled up — the
-  // "highlight moves up but the view stays put" bug). Verified in Chromium 63.
+  // only focusables here.
+  //
+  // On focus, scroll the PAGE to the very top rather than centring the button:
+  // the hero is the top section, so this keeps the top nav (now in normal
+  // flow) on screen. Centring the button scrolled the page down and pushed the
+  // nav off the top — "the navbar disappears after load" (Play is auto-focused
+  // on Home). Verified in Chromium 63.
+  const scrollPageToTop = (el: HTMLElement | null) => {
+    const page = el?.closest(".tv-container") as HTMLElement | null;
+    if (page) page.scrollTo({ top: 0, behavior: "auto" });
+  };
+
   const { ref: playRef, focused: playFocused, focusSelf: focusPlay } = useFocusable({
     focusKey: "hero-play",
     onFocus: () => {
       setPaused(true);
       emitBackdropForCurrent();
-      scrollFocusedIntoView(playRef.current as HTMLElement | null);
+      scrollPageToTop(playRef.current as HTMLElement | null);
     },
     onBlur: () => setPaused(false),
   });
@@ -40,7 +48,7 @@ export function HeroCarousel({ items, onBackdropChange }: HeroCarouselProps) {
     onFocus: () => {
       setPaused(true);
       emitBackdropForCurrent();
-      scrollFocusedIntoView(infoRef.current as HTMLElement | null);
+      scrollPageToTop(infoRef.current as HTMLElement | null);
     },
     onBlur: () => setPaused(false),
   });
