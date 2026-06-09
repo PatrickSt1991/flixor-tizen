@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useFocusable, FocusContext } from "@noriginmedia/norigin-spatial-navigation";
+import { useFocusable } from "@noriginmedia/norigin-spatial-navigation";
 import { flixor } from "../services/flixor";
 import { loadSettings } from "../services/settings";
+import { scrollFocusedIntoView } from "../utils/tvScroll";
 import type { PlexMediaItem } from "@flixor/core";
 
 interface HeroCarouselProps {
@@ -18,27 +19,19 @@ export function HeroCarousel({ items, onBackdropChange }: HeroCarouselProps) {
   const navigate = useNavigate();
   const pausedRef = useRef(paused);
 
-  // The focus boundary lives on a TIGHT wrapper around just the action
-  // buttons — NOT the whole 85vh <section>. A section-sized focusable stole
-  // focus when navigating UP from the first row (its bottom edge is nearest,
-  // and norigin targets the container instead of delegating to a child), so
-  // up from the rows landed on the invisible section. A small wrapper (like
-  // the nav) delegates correctly to Play / More Info. Verified in Chromium 63.
-  const { ref: actionsRef, focusKey } = useFocusable({
-    focusKey: "hero-carousel",
-    trackChildren: true,
-    isFocusBoundary: true,
-    focusBoundaryDirections: ["left", "right"],
-  });
-
-  // `focused` must be rendered as a class: norigin's spatial focus is
-  // virtual (no element.focus()), so the :focus styles never apply on TV
-  // and the initially-focused Play button looked like nothing had focus.
+  // NO focusable container around the hero buttons. Any wrapper focusable —
+  // even a tight one — gets targeted when navigating UP from the first row
+  // instead of delegating to Play (norigin picks the nearest focusable, and a
+  // container competes with its own child). The Play/More-Info buttons are the
+  // only focusables here; they scroll the page to reveal the hero on focus
+  // (without that, focus reached Play but the page never scrolled up — the
+  // "highlight moves up but the view stays put" bug). Verified in Chromium 63.
   const { ref: playRef, focused: playFocused, focusSelf: focusPlay } = useFocusable({
     focusKey: "hero-play",
     onFocus: () => {
       setPaused(true);
       emitBackdropForCurrent();
+      scrollFocusedIntoView(playRef.current as HTMLElement | null);
     },
     onBlur: () => setPaused(false),
   });
@@ -47,6 +40,7 @@ export function HeroCarousel({ items, onBackdropChange }: HeroCarouselProps) {
     onFocus: () => {
       setPaused(true);
       emitBackdropForCurrent();
+      scrollFocusedIntoView(infoRef.current as HTMLElement | null);
     },
     onBlur: () => setPaused(false),
   });
@@ -182,27 +176,25 @@ export function HeroCarousel({ items, onBackdropChange }: HeroCarouselProps) {
           {currentItem.summary || "No overview available for this title."}
         </p>
 
-        <FocusContext.Provider value={focusKey}>
-          <div className="hero-actions" ref={actionsRef}>
-            <button
-              ref={playRef}
-              className={`btn-primary${playFocused ? " focused" : ""}`}
-              onClick={() => {
-                const part = currentItem.Media?.[0]?.Part?.[0];
-                if (part) navigate(`/player/${currentItem.ratingKey}`);
-              }}
-            >
-              <span className="icon">▶</span> Play
-            </button>
-            <button
-              ref={infoRef}
-              className={`btn-secondary${infoFocused ? " focused" : ""}`}
-              onClick={() => navigate(`/details/${currentItem.ratingKey}`)}
-            >
-              More Info
-            </button>
-          </div>
-        </FocusContext.Provider>
+        <div className="hero-actions">
+          <button
+            ref={playRef}
+            className={`btn-primary${playFocused ? " focused" : ""}`}
+            onClick={() => {
+              const part = currentItem.Media?.[0]?.Part?.[0];
+              if (part) navigate(`/player/${currentItem.ratingKey}`);
+            }}
+          >
+            <span className="icon">▶</span> Play
+          </button>
+          <button
+            ref={infoRef}
+            className={`btn-secondary${infoFocused ? " focused" : ""}`}
+            onClick={() => navigate(`/details/${currentItem.ratingKey}`)}
+          >
+            More Info
+          </button>
+        </div>
       </div>
     </section>
   );
