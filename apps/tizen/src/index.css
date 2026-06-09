@@ -2950,3 +2950,40 @@ body.performance-mode * {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Settings — Support / Ko-fi card */
+.support-card {
+  display: flex;
+  align-items: center;
+  padding: 8px 4px;
+}
+
+.support-qr {
+  width: 160px;
+  height: 160px;
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+  flex-shrink: 0;
+  margin-right: 28px;
+}
+
+.support-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.support-lead {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 8px;
+}
+
+.support-sub {
+  font-size: 18px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+  max-width: 640px;
+}

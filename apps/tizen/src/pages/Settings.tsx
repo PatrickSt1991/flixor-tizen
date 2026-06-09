@@ -283,6 +283,25 @@ export function SettingsPage() {
             />
           </SettingsCard>
 
+          {/* Support the Tizen port */}
+          <SettingsCard title="Support the Tizen Port">
+            <div className="support-card">
+              <img
+                className="support-qr"
+                src={`${import.meta.env.BASE_URL}ko-fi-qr.webp`}
+                alt="Ko-fi donation QR code"
+              />
+              <div className="support-text">
+                <p className="support-lead">Enjoying Flixor on your TV?</p>
+                <p className="support-sub">
+                  Scan the code to support the Samsung Tizen port on Ko-fi.
+                  Flixor itself is by the upstream Flixor project — this only
+                  helps with the TV port.
+                </p>
+              </div>
+            </div>
+          </SettingsCard>
+
           {/* About */}
           <SettingsCard title="About">
             <SettingItem
