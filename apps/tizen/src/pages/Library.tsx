@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   useFocusable,
   FocusContext,
+  setFocus,
 } from "@noriginmedia/norigin-spatial-navigation";
 import { flixor } from "../services/flixor";
 import { loadSettings } from "../services/settings";
@@ -68,19 +69,21 @@ export function LibraryPage() {
   const {
     ref: pageRef,
     focusKey: pageFocusKey,
-    focusSelf,
   } = useFocusable({
     focusKey: "library-page",
     trackChildren: true,
   });
 
-  // Focus the page once content loads so D-PAD navigation works
+  // Focus the GRID once content loads — NOT the page container. Focusing the
+  // page delegated to its first child (the top nav), so returning from a
+  // details page landed on the nav's Home button instead of a poster.
+  // setFocus on the grid delegates to its first card.
   useEffect(() => {
-    if (!loading) {
-      const timer = setTimeout(() => focusSelf(), 100);
+    if (!loading && filteredItems.length > 0) {
+      const timer = setTimeout(() => setFocus("library-grid"), 100);
       return () => clearTimeout(timer);
     }
-  }, [loading, focusSelf]);
+  }, [loading, filteredItems.length]);
 
   useEffect(() => {
     const loadLibrary = async () => {
@@ -231,6 +234,7 @@ export function LibraryPage() {
               render={renderCard}
               hasMore={!isFiltering && hasMore}
               loadMore={!isFiltering ? loadMore : undefined}
+              focusKey="library-grid"
             />
           </div>
         )}

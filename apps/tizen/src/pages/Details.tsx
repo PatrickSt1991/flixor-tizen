@@ -741,7 +741,7 @@ export function DetailsPage() {
           <div className="details-section">
             <div className="cast-list">
               {cast.map((c, i) => (
-                <button
+                <FocusableButton
                   key={i}
                   className="cast-item"
                   onClick={() => handleCastClick(c.name)}
@@ -759,7 +759,7 @@ export function DetailsPage() {
                   </div>
                   <div className="cast-name">{c.name}</div>
                   <div className="cast-role">{c.character}</div>
-                </button>
+                </FocusableButton>
               ))}
             </div>
           </div>

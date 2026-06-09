@@ -6,6 +6,7 @@ import { loadSettings, saveSettings, setDiscoveryDisabled, type TizenSettings } 
 import { TopNav } from "../components/TopNav";
 import { SettingsCard } from "../components/SettingsCard";
 import { SettingItem } from "../components/SettingItem";
+import { scrollFocusedIntoView } from "../utils/tvScroll";
 import { HomeScreenSettings } from "../components/settings/HomeScreenSettings";
 import { PlaybackSettings } from "../components/settings/PlaybackSettings";
 import { IntegrationSettings } from "../components/settings/IntegrationSettings";
@@ -323,7 +324,10 @@ export function SettingsPage() {
 
 
 function NavItem({ label, onPress }: { label: string; onPress: () => void }) {
-  const { ref, focused } = useFocusable({ onEnterPress: onPress });
+  const { ref, focused } = useFocusable({
+    onEnterPress: onPress,
+    onFocus: () => scrollFocusedIntoView(ref.current as HTMLElement | null),
+  });
 
   return (
     <button

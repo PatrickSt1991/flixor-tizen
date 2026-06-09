@@ -602,6 +602,7 @@ input:focus,
 }
 
 .cast-item:focus .cast-thumb-container,
+.cast-item.focused .cast-thumb-container,
 .cast-item:hover .cast-thumb-container {
   transform: scale(1.1);
   border-color: #ff4b2b;
@@ -1515,7 +1516,8 @@ input:focus,
   color: white;
 }
 
-.tab-btn:focus {
+.tab-btn:focus,
+.tab-btn.focused {
   transform: scale(1.1);
   border-color: white;
   color: white;

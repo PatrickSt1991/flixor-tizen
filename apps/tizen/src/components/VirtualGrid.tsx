@@ -25,6 +25,9 @@ export interface VirtualGridProps<T extends VirtualGridItem> {
   render: (item: T) => JSX.Element;
   hasMore?: boolean;
   loadMore?: () => void;
+  /** Stable focusKey so callers can setFocus() to the grid (focus delegates
+   *  to the first card). Without it, returning to a page would focus the nav. */
+  focusKey?: string;
 }
 
 import { computeLayout } from "../utils/virtualGridUtils";
@@ -103,6 +106,7 @@ export function VirtualGrid<T extends VirtualGridItem>({
   render,
   hasMore,
   loadMore,
+  focusKey: focusKeyProp,
 }: VirtualGridProps<T>) {
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(600);
@@ -117,6 +121,7 @@ export function VirtualGrid<T extends VirtualGridItem>({
   // stayed 0, computeLayout fell back to one column and the scroll listener
   // never attached: no grid, no scrolling.)
   const { ref: focusRef, focusKey } = useFocusable({
+    focusKey: focusKeyProp,
     trackChildren: true,
     isFocusBoundary: true,
     // Trap only left/right (edge columns); up/down may leave the grid
