@@ -6,6 +6,8 @@ import {
 } from "@noriginmedia/norigin-spatial-navigation";
 import { flixor } from "../services/flixor";
 import { FocusableButton } from "../components/FocusableButton";
+import { TrackPicker } from "../components/TrackPicker";
+import { getAudioOptions, getSubtitleOptions } from "../services/streamDecision";
 import type {
   PlexMediaItem,
   TMDBMedia,
@@ -135,6 +137,14 @@ export function DetailsPage() {
 
   // Version selector state
   const [selectedMedia, setSelectedMedia] = useState(0);
+
+  // Pre-select audio/subtitle before pressing Play (regular-Plex style).
+  // Movies only — their tracks are in the loaded metadata; episode tracks
+  // vary per-episode and are picked in the player instead.
+  const [preAudio, setPreAudio] = useState<number | null>(null);
+  const [preSub, setPreSub] = useState<number | null>(null);
+  const [showAudioPicker, setShowAudioPicker] = useState(false);
+  const [showSubPicker, setShowSubPicker] = useState(false);
   const [showVersionSelector, setShowVersionSelector] = useState(false);
 
   // Watch providers state
@@ -570,6 +580,31 @@ export function DetailsPage() {
     [seasons],
   );
 
+  // Movie audio/subtitle tracks for pre-Play selection.
+  const movieStreams = useMemo(
+    () =>
+      item?.type === "movie"
+        ? (item.Media?.[selectedMedia]?.Part?.[0]?.Stream ?? [])
+        : [],
+    [item, selectedMedia],
+  );
+  const preAudioTracks = useMemo(() => {
+    const ids = getAudioOptions(movieStreams);
+    return movieStreams.filter((s) => ids.some((t) => t.id === s.id));
+  }, [movieStreams]);
+  const preSubTracks = useMemo(() => {
+    const ids = getSubtitleOptions(movieStreams);
+    return movieStreams.filter((s) => ids.some((t) => t.id === s.id));
+  }, [movieStreams]);
+
+  // Default the pre-selection to the server's currently-selected streams.
+  useEffect(() => {
+    const a = movieStreams.find((s) => s.streamType === 2 && s.selected);
+    const sub = movieStreams.find((s) => s.streamType === 3 && s.selected);
+    setPreAudio(a ? a.id : null);
+    setPreSub(sub ? sub.id : null);
+  }, [movieStreams]);
+
   // Build tabs
   const tabs = useMemo(() => {
     const result: Array<{ label: string; content: React.ReactNode }> = [];
@@ -944,7 +979,14 @@ export function DetailsPage() {
                     focusOnMount
                     onClick={() =>
                       navigate(`/player/${playTarget}`, {
-                        state: { mediaIndex: selectedMedia },
+                        state: {
+                          mediaIndex: selectedMedia,
+                          // Pass the pre-selected movie tracks to the player.
+                          audioStreamID:
+                            item.type === "movie" ? preAudio : undefined,
+                          subtitleStreamID:
+                            item.type === "movie" ? preSub : undefined,
+                        },
                       })
                     }
                   >
@@ -966,6 +1008,24 @@ export function DetailsPage() {
                 </FocusableButton>
               );
             })()}
+
+            {/* Pre-Play audio/subtitle selection (movies) */}
+            {preAudioTracks.length > 1 && (
+              <FocusableButton
+                className="btn-secondary"
+                onClick={() => setShowAudioPicker(true)}
+              >
+                Audio: {preAudioTracks.find((t) => t.id === preAudio)?.language || "Default"}
+              </FocusableButton>
+            )}
+            {preSubTracks.length > 0 && (
+              <FocusableButton
+                className="btn-secondary"
+                onClick={() => setShowSubPicker(true)}
+              >
+                Subtitles: {preSub === null ? "Off" : preSubTracks.find((t) => t.id === preSub)?.language || "On"}
+              </FocusableButton>
+            )}
 
             {plexTrailer && (
               <FocusableButton
@@ -1049,6 +1109,35 @@ export function DetailsPage() {
           selectedIndex={selectedMedia}
           onSelect={(idx) => setSelectedMedia(idx)}
           onClose={() => setShowVersionSelector(false)}
+        />
+      )}
+
+      {/* Pre-Play audio picker (movies) */}
+      {showAudioPicker && (
+        <TrackPicker
+          title="Audio"
+          tracks={preAudioTracks}
+          selectedId={preAudio}
+          onSelect={(id) => {
+            setPreAudio(id);
+            setShowAudioPicker(false);
+          }}
+          onClose={() => setShowAudioPicker(false)}
+        />
+      )}
+
+      {/* Pre-Play subtitle picker (movies) */}
+      {showSubPicker && (
+        <TrackPicker
+          title="Subtitles"
+          tracks={preSubTracks}
+          selectedId={preSub}
+          onSelect={(id) => {
+            setPreSub(id);
+            setShowSubPicker(false);
+          }}
+          onClose={() => setShowSubPicker(false)}
+          showOff
         />
       )}
     </div>
