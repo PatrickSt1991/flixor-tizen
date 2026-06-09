@@ -3018,3 +3018,89 @@ body.performance-mode * {
   margin: 0;
   max-width: 640px;
 }
+
+/* ── Track picker (audio/subtitle selection modal) ──────────────────────
+   Was entirely unstyled: items rendered as inline <button>s laid out
+   horizontally, so D-pad "down" couldn't move between them and the modal
+   looked broken. Vertical list with clear focus highlight. */
+.track-picker-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.track-picker-modal {
+  background: #1a1a1d;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 28px 24px;
+  width: 520px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.track-picker-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 18px;
+}
+
+.track-picker-list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.track-picker-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  padding: 16px 20px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e5e5e5;
+  font-size: 22px;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+}
+
+.track-picker-item:focus,
+.track-picker-item.spatial-focused {
+  border-color: #ff4b2b;
+  background: rgba(255, 75, 43, 0.22);
+  transform: scale(1.03);
+}
+
+.track-picker-item.active {
+  color: #fff;
+  font-weight: 700;
+}
+
+.track-picker-item-label {
+  flex: 1;
+}
+
+.track-picker-item-detail {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-left: 12px;
+}
+
+.track-picker-item-check {
+  margin-left: 12px;
+  color: #ff4b2b;
+  font-weight: 800;
+}

@@ -4,6 +4,7 @@ import {
   FocusContext,
 } from "@noriginmedia/norigin-spatial-navigation";
 import type { PlexStream } from "@flixor/core";
+import { scrollFocusedIntoView } from "../utils/tvScroll";
 
 export interface TrackPickerProps {
   /** Modal title, e.g. "Audio" or "Subtitles" */
@@ -28,7 +29,10 @@ function TrackItem({
   isActive: boolean;
   onSelect: () => void;
 }) {
-  const { ref, focused } = useFocusable({ onEnterPress: onSelect });
+  const { ref, focused } = useFocusable({
+    onEnterPress: onSelect,
+    onFocus: () => scrollFocusedIntoView(ref.current as HTMLElement | null),
+  });
 
   return (
     <button
@@ -61,11 +65,19 @@ export function TrackPicker({
   onClose,
   showOff = false,
 }: TrackPickerProps) {
-  const { ref, focusKey, focusSelf } = useFocusable({ isFocusBoundary: true });
+  // trackChildren is required: without it, focusSelf() focuses the (non-
+  // selectable) list container and — because it's also a focus boundary —
+  // traps there, so none of the track rows could be selected. With it,
+  // focusSelf delegates to the first TrackItem.
+  const { ref, focusKey, focusSelf } = useFocusable({
+    isFocusBoundary: true,
+    trackChildren: true,
+  });
 
-  // Focus the list on mount
+  // Focus the first track on mount (delegated via trackChildren).
   useEffect(() => {
-    focusSelf();
+    const t = setTimeout(() => focusSelf(), 50);
+    return () => clearTimeout(t);
   }, [focusSelf]);
 
   // Close on Back key (Tizen 10009) or Escape
