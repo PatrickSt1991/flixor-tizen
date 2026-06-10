@@ -666,7 +666,12 @@ export class PlexServerService {
     });
 
     const params = new URLSearchParams({
-      hasMDE: '1',
+      // hasMDE=0: this client has NO Media Decision Engine. Samsung's WebView
+      // can't render Plex text/image subtitles itself, so Plex must make the
+      // decision server-side and BURN the chosen subtitle into the video.
+      // hasMDE=1 told Plex "the client handles subtitles" → it never burned
+      // them (and the decision endpoint 400'd without a client profile).
+      hasMDE: '0',
       path: `/library/metadata/${ratingKey}`,
       mediaIndex: String(mediaIndex),
       partIndex: '0',
@@ -761,7 +766,10 @@ export class PlexServerService {
     // endpoint return 400 Bad Request, so the subtitle-burn choice is never
     // registered for the session (confirmed via the on-device debug overlay).
     const params = new URLSearchParams({
-      hasMDE: '1',
+      // hasMDE=0 — see getTranscodeUrl: this client has no Media Decision
+      // Engine, so Plex decides server-side and burns subtitles. hasMDE=1 made
+      // this decision endpoint return 400 (no client profile to decide with).
+      hasMDE: '0',
       path: `/library/metadata/${ratingKey}`,
       mediaIndex: String(mediaIndex),
       partIndex: '0',
