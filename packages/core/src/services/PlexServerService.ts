@@ -11,6 +11,17 @@ import type {
   ContinueWatchingResult,
 } from '../models/plex';
 
+/** Result of a transcode decision request — captured for on-device debugging. */
+export interface TranscodeDecisionResult {
+  /** The full decision request URL that was sent to Plex. */
+  url: string;
+  /** HTTP status of the decision response (0 if the request threw). */
+  status: number;
+  ok: boolean;
+  /** Truncated decision response body — shows per-stream burn/ignore decisions. */
+  body: string;
+}
+
 /**
  * Service for communicating with a Plex Media Server
  */
@@ -739,7 +750,7 @@ export class PlexServerService {
       maxVideoBitrate?: number;
       videoResolution?: string;
     }
-  ): Promise<void> {
+  ): Promise<TranscodeDecisionResult> {
     const mediaIndex = options?.mediaIndex ?? 0;
     // The decision and the start.m3u8 request MUST carry the same `session`,
     // otherwise Plex registers the chosen streams (incl. subtitle burn) against
@@ -791,13 +802,26 @@ export class PlexServerService {
         headers: this.getHeaders(),
       });
 
+      // The decision response is where Plex reports, per stream, whether it
+      // will `burn`/`copy`/`transcode`/`ignore` it — i.e. whether our chosen
+      // subtitle is actually being burned. Capture it so the on-device debug
+      // overlay can show it (no devtools on a real TV).
+      let body = '';
+      try {
+        body = (await response.text()).slice(0, 4000);
+      } catch {
+        // body not readable — leave empty
+      }
+
       if (!response.ok) {
         console.warn('[PlexServerService] Decision API returned:', response.status);
       } else {
         console.log('[PlexServerService] Transcode decision made successfully');
       }
+      return { url, status: response.status, ok: response.ok, body };
     } catch (e) {
       console.warn('[PlexServerService] Failed to make transcode decision:', e);
+      return { url, status: 0, ok: false, body: String(e) };
     }
   }
 
