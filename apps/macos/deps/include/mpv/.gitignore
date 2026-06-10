@@ -1,6 +1,0 @@
-# Exclude everything except the mpv headers IINA needs.
-*
-!.gitignore
-!client.h
-!render.h
-!render_gl.h
