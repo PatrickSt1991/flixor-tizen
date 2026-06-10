@@ -755,7 +755,11 @@ export class PlexServerService {
     // The decision and the start.m3u8 request MUST carry the same `session`,
     // otherwise Plex registers the chosen streams (incl. subtitle burn) against
     // one session but transcodes/plays a different one — so burned subtitles
-    // silently never appear. Mirror the start request's core params here too.
+    // silently never appear. Mirror the start request's params EXACTLY — with
+    // hasMDE=1, Plex's Media Decision Engine requires mediaBufferSize (and the
+    // full param set) to build a decision; omitting it makes the decision
+    // endpoint return 400 Bad Request, so the subtitle-burn choice is never
+    // registered for the session (confirmed via the on-device debug overlay).
     const params = new URLSearchParams({
       hasMDE: '1',
       path: `/library/metadata/${ratingKey}`,
@@ -772,7 +776,10 @@ export class PlexServerService {
       subtitleSize: '100',
       audioBoost: '100',
       location: 'lan',
+      addDebugOverlay: '0',
       autoAdjustQuality: '0',
+      mediaBufferSize: '102400',
+      copyts: '1',
       'X-Plex-Token': this.token,
       'X-Plex-Client-Identifier': this.clientId,
       'X-Plex-Product': 'Flixor Mobile',
