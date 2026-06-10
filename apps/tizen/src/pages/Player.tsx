@@ -60,6 +60,10 @@ export function PlayerPage() {
   const [isPaused, setIsPaused] = useState(false);
   // True while a stream is loading/buffering (initial start or a track switch).
   const [isBuffering, setIsBuffering] = useState(false);
+  // What the current stream is doing, so the buffering label can explain the
+  // wait: a transcode (esp. burning subtitles) takes the server a few seconds
+  // to spin up, vs. a near-instant direct stream.
+  const [streamMode, setStreamMode] = useState<"start" | "transcode" | "burn">("start");
   const [activeMarker, setActiveMarker] = useState<PlexMarker | null>(null);
   const [audioTracks, setAudioTracks] = useState<PlexStream[]>([]);
   const [subtitleTracks, setSubtitleTracks] = useState<PlexStream[]>([]);
@@ -195,6 +199,7 @@ export function PlayerPage() {
           if (preAudio != null) setSelectedAudio(preAudio);
           if (preSub != null) setSelectedSub(preSub);
           try {
+            setStreamMode(preSub != null ? "burn" : "transcode");
             const session = await startTranscode(ratingKey, {
               mediaIndex: selectedMedia,
               maxVideoBitrate: decision.maxBitrate,
@@ -223,20 +228,24 @@ export function PlayerPage() {
           // already set up above
         } else if (backendResult) {
           backendSessionRef.current = backendResult.sessionId;
+          setStreamMode("start");
           setVideoUrl(backendResult.streamUrl);
         } else {
           // Fall back to direct Plex stream
           backendSessionRef.current = null;
 
           if (decision.strategy === "direct-play") {
+            setStreamMode("start");
             const url = await flixor.plexServer.getStreamUrl(ratingKey, selectedMedia);
             setVideoUrl(url);
           } else if (decision.strategy === "direct-stream") {
+            setStreamMode("start");
             const url = await flixor.plexServer.getStreamUrl(ratingKey, selectedMedia);
             setVideoUrl(url);
           } else {
             // Transcode
             try {
+              setStreamMode("transcode");
               const session = await startTranscode(ratingKey, {
                 mediaIndex: selectedMedia,
                 maxVideoBitrate: decision.maxBitrate,
@@ -487,6 +496,7 @@ export function PlayerPage() {
     // or render Plex text subs itself. Resume at the current position.
     const offsetMs = Math.floor((videoRef.current?.currentTime ?? 0) * 1000);
     try {
+      setStreamMode(nextSub != null ? "burn" : "transcode");
       const session = await startTranscode(ratingKey, {
         mediaIndex: selectedMedia,
         audioStreamID: nextAudio != null ? String(nextAudio) : undefined,
@@ -631,7 +641,18 @@ export function PlayerPage() {
       {isBuffering && (
         <div className="player-buffering">
           <div className="player-buffering-spinner" />
-          <div className="player-buffering-label">Starting…</div>
+          <div className="player-buffering-label">
+            {streamMode === "burn"
+              ? "Transcoding (burning in subtitles)…"
+              : streamMode === "transcode"
+                ? "Transcoding…"
+                : "Starting…"}
+          </div>
+          {streamMode !== "start" && (
+            <div className="player-buffering-sublabel">
+              Your Plex server is converting this title — this can take a few seconds.
+            </div>
+          )}
         </div>
       )}
 
