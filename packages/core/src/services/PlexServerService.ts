@@ -691,6 +691,11 @@ export class PlexServerService {
       mediaBufferSize: '102400',
       session: sessionId,
       copyts: '1',
+      // A recognised client-profile name is REQUIRED by the universal transcode
+      // decision endpoint — without it Plex returns 400 Bad Request, the
+      // subtitle-burn decision is never registered, and subtitles never appear.
+      // Tizen is a Chromium WebView, so "Chrome" is the correct profile.
+      'X-Plex-Client-Profile-Name': 'Chrome',
       'X-Plex-Token': this.token,
       'X-Plex-Client-Identifier': this.clientId,
       'X-Plex-Product': 'Flixor Mobile',
@@ -788,6 +793,10 @@ export class PlexServerService {
       autoAdjustQuality: '0',
       mediaBufferSize: '102400',
       copyts: '1',
+      // REQUIRED — see getTranscodeUrl: without a recognised client-profile
+      // name the decision endpoint returns 400 Bad Request. "Chrome" matches
+      // the Tizen Chromium WebView and yields decision="burn" for subtitles.
+      'X-Plex-Client-Profile-Name': 'Chrome',
       'X-Plex-Token': this.token,
       'X-Plex-Client-Identifier': this.clientId,
       'X-Plex-Product': 'Flixor Mobile',
