@@ -54,7 +54,7 @@ bit of work. On top of upstream Flixor, this port adds:
 2. **Download** the latest `Flixor.wgt` from the
    [**Releases**](https://github.com/PatrickSt1991/flixor-tizen/releases/latest) page.
 3. **Sideload** it using any of:
-   - [**Jellyfin2Samsung installer**](https://github.com/Jellyfin2Samsung/Samsung-Jellyfin-Installer/releases/latest) (easiest — GUI, no SDK)
+   - [**Apps2Samsung installer**](https://github.com/Apps2Samsung/Apps2Samsung/releases/latest) (easiest — GUI, no SDK)
    - **Tizen Studio** (`Device Manager` → install `.wgt`)
    - **`sdb`** (`sdb install Flixor.wgt`)
 4. Launch Flixor on the TV and sign in to Plex with the on-screen PIN.
