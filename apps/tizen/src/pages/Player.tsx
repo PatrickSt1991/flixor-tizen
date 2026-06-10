@@ -58,6 +58,8 @@ export function PlayerPage() {
   const [item, setItem] = useState<PlexMediaItem | null>(null);
   const [showControls, setShowControls] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  // True while a stream is loading/buffering (initial start or a track switch).
+  const [isBuffering, setIsBuffering] = useState(false);
   const [activeMarker, setActiveMarker] = useState<PlexMarker | null>(null);
   const [audioTracks, setAudioTracks] = useState<PlexStream[]>([]);
   const [subtitleTracks, setSubtitleTracks] = useState<PlexStream[]>([]);
@@ -285,6 +287,11 @@ export function PlayerPage() {
   // Attach HLS.js or set video src when videoUrl changes
   useEffect(() => {
     if (videoUrl) {
+      // A fresh stream is loading (initial play or a track/quality switch) —
+      // show the buffering indicator until the video actually starts playing.
+      // Burned-subtitle switches re-transcode, so this can take a few seconds;
+      // the spinner makes the wait visible instead of a frozen black frame.
+      setIsBuffering(true);
       attachStream(videoUrl);
     }
   }, [videoUrl, attachStream]);
@@ -520,6 +527,10 @@ export function PlayerPage() {
     const video = videoRef.current;
     const currentTimeMs = video.currentTime * 1000;
 
+    // Safety net: if playback is progressing, we're not buffering — clears the
+    // "Starting…" spinner even if the `playing` event didn't fire.
+    if (isBuffering && !video.paused) setIsBuffering(false);
+
     // Update seek slider state
     setCurrentTime(video.currentTime);
     if (video.duration && isFinite(video.duration)) {
@@ -608,9 +619,21 @@ export function PlayerPage() {
         onEnded={handleEnded}
         onPlay={() => setIsPaused(false)}
         onPause={() => setIsPaused(true)}
+        onWaiting={() => setIsBuffering(true)}
+        onStalled={() => setIsBuffering(true)}
+        onPlaying={() => setIsBuffering(false)}
       >
         Your browser does not support the video tag.
       </video>
+
+      {/* Buffering / starting indicator — visible until the video starts
+          playing (transcoded + burned-subtitle streams take a few seconds). */}
+      {isBuffering && (
+        <div className="player-buffering">
+          <div className="player-buffering-spinner" />
+          <div className="player-buffering-label">Starting…</div>
+        </div>
+      )}
 
       {/* Playback Stats HUD */}
       <StatsHUD videoRef={videoRef} item={item} visible={showStatsHud} playbackStrategy={playbackStrategy ?? undefined} />

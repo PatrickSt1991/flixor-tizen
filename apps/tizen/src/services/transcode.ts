@@ -78,6 +78,13 @@ export async function startTranscode(
     videoResolution: settings.videoResolution,
   });
 
+  // Health check moved onto the decision: if it failed, surface it so the
+  // caller falls back to a direct stream. (Previously the start.m3u8 pre-fetch
+  // below served this purpose.) decision is undefined when mocked in tests.
+  if (decision && !decision.ok) {
+    throw new Error(`Transcode decision failed with status ${decision.status}`);
+  }
+
   // Build transcode URL (same session as the decision above)
   const result = flixor.plexServer.getTranscodeUrl(mediaKey, {
     maxVideoBitrate: settings.maxVideoBitrate,
@@ -102,9 +109,11 @@ export async function startTranscode(
     timestamp: Date.now(),
   };
 
-  // Start the transcode session on the server
-  await flixor.plexServer.startTranscodeSession(result.startUrl);
-
+  // NOTE: we deliberately do NOT pre-fetch start.m3u8 here anymore. The video
+  // player (hls.js) loads start.m3u8 itself, and that request is what actually
+  // starts the Plex transcode — an extra blocking fetch just added a full
+  // round-trip before playback could begin. The decision above already confirms
+  // the session is set up.
   activeSessionId = result.sessionId;
 
   return {
