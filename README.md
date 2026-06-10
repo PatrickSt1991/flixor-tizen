@@ -1,12 +1,5 @@
 <a id="readme-top"></a>
 
-<!-- PROJECT SHIELDS -->
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![License][license-shield]][license-url]
-
 <div align="center">
   <h1>Flixor for Samsung Tizen TV</h1>
   <p><strong>A beautiful, Netflix-style Plex client — running natively on your Samsung TV</strong></p>
@@ -141,15 +134,3 @@ the upstream project and are used here only to describe the origin of the softwa
 <p align="center">
   A community port for the Plex community — with thanks to the Flixor team.
 </p>
-
-<!-- MARKDOWN LINKS & IMAGES -->
-[contributors-shield]: https://img.shields.io/github/contributors/PatrickSt1991/flixor-tizen.svg?style=for-the-badge
-[contributors-url]: https://github.com/PatrickSt1991/flixor-tizen/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/PatrickSt1991/flixor-tizen.svg?style=for-the-badge
-[forks-url]: https://github.com/PatrickSt1991/flixor-tizen/network/members
-[stars-shield]: https://img.shields.io/github/stars/PatrickSt1991/flixor-tizen.svg?style=for-the-badge
-[stars-url]: https://github.com/PatrickSt1991/flixor-tizen/stargazers
-[issues-shield]: https://img.shields.io/github/issues/PatrickSt1991/flixor-tizen.svg?style=for-the-badge
-[issues-url]: https://github.com/PatrickSt1991/flixor-tizen/issues
-[license-shield]: https://img.shields.io/badge/license-AGPL--3.0%20%2B%20NC-blue.svg?style=for-the-badge
-[license-url]: ./LICENSE.md
