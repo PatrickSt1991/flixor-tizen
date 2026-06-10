@@ -6,7 +6,7 @@
      (tizen.tvinputdevice.registerKey needs tv.inputdevice; tv.window and
      tv.audio webapis are never called). -->
 <widget xmlns:tizen="http://tizen.org/ns/widgets"
-    xmlns="http://www.w3.org/ns/widgets" id="http://flixor.tv/Flixor" version="1.0.0" viewmodes="maximized">
+    xmlns="http://www.w3.org/ns/widgets" id="http://flixor.tv/Flixor" version="1.0.1" viewmodes="maximized">
     <tizen:application id="FlixTVApp1.Flixor" package="FlixTVApp1" required_version="2.4"/>
     <content src="index.html"/>
     <feature name="http://tizen.org/feature/screen.size.normal.1080.1920"/>

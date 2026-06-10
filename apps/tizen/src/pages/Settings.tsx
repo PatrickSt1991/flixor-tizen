@@ -307,7 +307,7 @@ export function SettingsPage() {
           <SettingsCard title="About">
             <SettingItem
               label="Version"
-              description="1.0.0-beta (Tizen)"
+              description="1.0.1 (Tizen)"
               control={{ type: "button", buttonLabel: "", onPress: () => {} }}
             />
             <SettingItem
