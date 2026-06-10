@@ -46,6 +46,30 @@ bit of work. On top of upstream Flixor, this port adds:
 > plays movies & shows with audio/subtitle switching. There are still rough edges
 > being worked through — bug reports and TV-model compatibility notes are very welcome.
 
+## Screenshots
+
+Running on a Samsung Tizen TV:
+
+| Home | Continue Watching |
+|------|-------------------|
+| ![Home hero](docs/screenshots/home-hero.png) | ![Continue Watching](docs/screenshots/home-continue-watching.png) |
+
+| Recently Added | New & Popular |
+|----------------|---------------|
+| ![Recently Added](docs/screenshots/home-recently-added.png) | ![New & Popular](docs/screenshots/new-and-popular.png) |
+
+| Movies | Shows |
+|--------|-------|
+| ![Movies library](docs/screenshots/movies.png) | ![Shows library](docs/screenshots/shows.png) |
+
+| Search | My List |
+|--------|---------|
+| ![Search](docs/screenshots/search.png) | ![My List](docs/screenshots/my-list.png) |
+
+| Settings | |
+|----------|--|
+| ![Settings](docs/screenshots/settings.png) | |
+
 ## Installation
 
 1. **Enable Developer Mode** on your Samsung TV
