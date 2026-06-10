@@ -33,7 +33,7 @@ beforeEach(() => {
 });
 
 describe("startTranscode", () => {
-  it("calls decision API then starts session and returns session info", async () => {
+  it("builds the start URL and starts the session (no decision call)", async () => {
     const result = await startTranscode("12345", {
       maxVideoBitrate: 8000,
       videoResolution: "1920x1080",
@@ -41,14 +41,9 @@ describe("startTranscode", () => {
       mediaIndex: 0,
     });
 
-    expect(flixor.plexServer.makeTranscodeDecision).toHaveBeenCalledWith("12345", {
-      audioStreamID: "201",
-      subtitleStreamID: undefined,
-      mediaIndex: 0,
-      sessionId: expect.any(String),
-      maxVideoBitrate: 8000,
-      videoResolution: "1920x1080",
-    });
+    // The /decision endpoint 400s on this server and poisons the session, so we
+    // skip it entirely and let start.m3u8 handle subtitle burning.
+    expect(flixor.plexServer.makeTranscodeDecision).not.toHaveBeenCalled();
     expect(flixor.plexServer.getTranscodeUrl).toHaveBeenCalledWith("12345", {
       maxVideoBitrate: 8000,
       videoResolution: "1920x1080",
@@ -59,11 +54,6 @@ describe("startTranscode", () => {
       mediaIndex: 0,
       sessionId: expect.any(String),
     });
-    // The decision and the start request must share the SAME session, or Plex
-    // applies the subtitle-burn decision to a session that isn't played.
-    const decisionSession = (flixor.plexServer.makeTranscodeDecision as ReturnType<typeof vi.fn>).mock.calls[0][1].sessionId;
-    const urlSession = (flixor.plexServer.getTranscodeUrl as ReturnType<typeof vi.fn>).mock.calls[0][1].sessionId;
-    expect(decisionSession).toBe(urlSession);
     expect(flixor.plexServer.startTranscodeSession).toHaveBeenCalledWith(
       "http://plex/transcode/start.m3u8",
     );
@@ -119,15 +109,18 @@ describe("updateTranscode", () => {
 
     // Should have stopped the old session
     expect(flixor.plexServer.stopTranscode).toHaveBeenCalledWith("abc-123");
-    // Should have started a new one
+    // Should have started a new one with the updated streams on the start URL
     expect(updated.sessionId).toBe("abc-123");
-    expect(flixor.plexServer.makeTranscodeDecision).toHaveBeenLastCalledWith("12345", {
+    expect(flixor.plexServer.makeTranscodeDecision).not.toHaveBeenCalled();
+    expect(flixor.plexServer.getTranscodeUrl).toHaveBeenLastCalledWith("12345", {
       audioStreamID: undefined,
       subtitleStreamID: "301",
       mediaIndex: 0,
       sessionId: expect.any(String),
       maxVideoBitrate: 12000,
       videoResolution: undefined,
+      directStream: undefined,
+      offset: undefined,
     });
   });
 });

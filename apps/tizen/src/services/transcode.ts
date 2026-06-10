@@ -60,22 +60,17 @@ export async function startTranscode(
 
   const { mediaIndex = 0, audioStreamID, subtitleStreamID } = settings;
 
-  // Generate ONE session id shared by both the decision and the start request.
-  // Plex applies the subtitle-burn decision to a specific session; if the
-  // start.m3u8 plays a different session the subtitles never appear.
   const sessionId = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
 
-  // Make transcode decision so Plex knows which streams to use
-  const decision = await flixor.plexServer.makeTranscodeDecision(mediaKey, {
-    audioStreamID,
-    subtitleStreamID,
-    mediaIndex,
-    sessionId,
-    maxVideoBitrate: settings.maxVideoBitrate,
-    videoResolution: settings.videoResolution,
-  });
-
-  // Build transcode URL (same session as the decision above)
+  // NOTE: we deliberately do NOT call /transcode/universal/decision anymore.
+  // On this server it returns 400 Bad Request for every request we can build
+  // (confirmed via the debug overlay, with hasMDE 0 and 1, params identical to
+  // the working start.m3u8). Because we sent it with the same `session` id that
+  // start.m3u8 then reuses, that failed decision appears to poison the session
+  // so Plex plays it WITHOUT the requested subtitle burn. start.m3u8 honours
+  // `subtitleStreamID` + `subtitles=burn` on its own, so we let it do the whole
+  // job against a clean, never-decisioned session (how simple Plex clients do
+  // subtitle burning).
   const result = flixor.plexServer.getTranscodeUrl(mediaKey, {
     maxVideoBitrate: settings.maxVideoBitrate,
     videoResolution: settings.videoResolution,
@@ -87,15 +82,14 @@ export async function startTranscode(
     sessionId,
   });
 
-  // Snapshot for the on-device debug overlay. (decision may be undefined when
-  // mocked in tests.)
+  // Snapshot for the on-device debug overlay.
   lastTranscodeDebug = {
     audioStreamID,
     subtitleStreamID,
     startUrl: result.startUrl,
-    decisionUrl: decision?.url ?? "",
-    decisionStatus: decision?.status ?? 0,
-    decisionBody: decision?.body ?? "",
+    decisionUrl: "(skipped — start.m3u8 handles subtitle burn directly)",
+    decisionStatus: 0,
+    decisionBody: "",
     timestamp: Date.now(),
   };
 
