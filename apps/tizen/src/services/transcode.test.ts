@@ -11,7 +11,12 @@ import {
 vi.mock("./flixor", () => ({
   flixor: {
     plexServer: {
-      makeTranscodeDecision: vi.fn().mockResolvedValue(undefined),
+      makeTranscodeDecision: vi.fn().mockResolvedValue({
+        url: "http://plex/transcode/decision",
+        status: 200,
+        ok: true,
+        body: "",
+      }),
       getTranscodeUrl: vi.fn().mockReturnValue({
         url: "http://plex/session/abc/base/index.m3u8",
         startUrl: "http://plex/transcode/start.m3u8",
@@ -64,9 +69,9 @@ describe("startTranscode", () => {
     const decisionSession = (flixor.plexServer.makeTranscodeDecision as ReturnType<typeof vi.fn>).mock.calls[0][1].sessionId;
     const urlSession = (flixor.plexServer.getTranscodeUrl as ReturnType<typeof vi.fn>).mock.calls[0][1].sessionId;
     expect(decisionSession).toBe(urlSession);
-    expect(flixor.plexServer.startTranscodeSession).toHaveBeenCalledWith(
-      "http://plex/transcode/start.m3u8",
-    );
+    // start.m3u8 is loaded by the player (hls.js), not pre-fetched here — no
+    // redundant round-trip before playback.
+    expect(flixor.plexServer.startTranscodeSession).not.toHaveBeenCalled();
     expect(result.sessionId).toBe("abc-123");
     expect(result.url).toBe("http://plex/session/abc/base/index.m3u8");
     expect(getActiveSessionId()).toBe("abc-123");
