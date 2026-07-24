@@ -315,6 +315,18 @@ export function ProfileSelect() {
     fetchProfiles();
   }, [fetchProfiles]);
 
+  // A single (or no) Home user means there is no real choice to make — the
+  // main account is already active. ServerSelect always routes here after
+  // connecting, so without this a non-Plex-Home account (getHomeUsers → 403 →
+  // []) lands on a dead-end "No Profiles Found" screen where focus is never
+  // set, so the remote appears dead. Auto-continue to Home instead, matching
+  // the init flow (App.tsx only shows this page when users.length > 1).
+  useEffect(() => {
+    if (!loading && !error && users.length <= 1) {
+      navigate("/", { replace: true });
+    }
+  }, [loading, error, users.length, navigate]);
+
   // Restore focus into the profile grid once profiles are loaded
   useEffect(() => {
     if (!loading && users.length > 0) {
