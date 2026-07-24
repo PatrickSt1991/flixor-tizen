@@ -61,6 +61,49 @@ export class PlexAuthService {
   }
 
   /**
+   * fetch() with a fail-open timeout.
+   *
+   * A hung plex.tv request (flaky network, captive relay, dropped TLS) has no
+   * natural timeout — it can leave an init screen on a permanent "Loading…"
+   * spinner with nothing focusable and nothing clickable, which is
+   * indistinguishable from a dead remote. Reject after `ms` so callers fall
+   * through to their error/retry path instead of freezing forever.
+   *
+   * AbortController only exists from Chrome 66; older Tizen WebViews lack it
+   * and core-js does not polyfill it, so feature-detect and fall back to a
+   * Promise.race (the underlying request keeps running but its result is
+   * discarded, which is fine here).
+   */
+  private async fetchWithTimeout(
+    input: string,
+    init: RequestInit,
+    ms = 10000
+  ): Promise<Response> {
+    const controller =
+      typeof AbortController !== 'undefined' ? new AbortController() : null;
+    let abortTimer: ReturnType<typeof setTimeout> | undefined;
+    let rejectTimer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        fetch(input, {
+          ...init,
+          ...(controller ? { signal: controller.signal } : {}),
+        }),
+        new Promise<never>((_, reject) => {
+          abortTimer = setTimeout(() => controller?.abort(), ms);
+          rejectTimer = setTimeout(
+            () => reject(new Error(`Request timed out after ${ms}ms`)),
+            ms
+          );
+        }),
+      ]);
+    } finally {
+      if (abortTimer) clearTimeout(abortTimer);
+      if (rejectTimer) clearTimeout(rejectTimer);
+    }
+  }
+
+  /**
    * Get standard Plex headers for API requests
    */
   private getHeaders(token?: string): Record<string, string> {
@@ -186,7 +229,7 @@ export class PlexAuthService {
    * Get available Plex servers for the authenticated user
    */
   async getServers(token: string): Promise<PlexServer[]> {
-    const response = await fetch(
+    const response = await this.fetchWithTimeout(
       `${PLEX_TV_URL}/api/v2/resources?includeHttps=1&includeRelay=1&includeIPv6=1`,
       {
         method: 'GET',
@@ -306,10 +349,13 @@ export class PlexAuthService {
    * Returns empty array if user is not part of a Plex Home
    */
   async getHomeUsers(token: string): Promise<PlexHomeUser[]> {
-    const response = await fetch(`${PLEX_TV_URL}/api/v2/home/users`, {
-      method: 'GET',
-      headers: this.getHeaders(token),
-    });
+    const response = await this.fetchWithTimeout(
+      `${PLEX_TV_URL}/api/v2/home/users`,
+      {
+        method: 'GET',
+        headers: this.getHeaders(token),
+      }
+    );
 
     if (!response.ok) {
       if (response.status === 403) {

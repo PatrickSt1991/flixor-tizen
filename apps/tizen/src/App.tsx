@@ -6,6 +6,7 @@ import { flixor } from "./services/flixor";
 import { loadSettings } from "./services/settings";
 
 // Pages
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { Home } from "./pages/Home";
 import { LibraryPage } from "./pages/Library";
@@ -223,7 +224,9 @@ function App() {
 
   return (
     <ToastContext.Provider value={toastState}>
-      <AppRoutes />
+      <ErrorBoundary>
+        <AppRoutes />
+      </ErrorBoundary>
       <ToastContainer />
     </ToastContext.Provider>
   );
