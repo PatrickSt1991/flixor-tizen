@@ -51,7 +51,11 @@ export function ServerSelect() {
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
 
-  const { ref: containerRef, focusKey: containerFocusKey } = useFocusable({
+  const {
+    ref: containerRef,
+    focusKey: containerFocusKey,
+    focusSelf,
+  } = useFocusable({
     trackChildren: true,
     isFocusBoundary: true,
   });
@@ -95,6 +99,17 @@ export function ServerSelect() {
   useEffect(() => {
     fetchServers();
   }, [fetchServers]);
+
+  // Set initial spatial focus once the server cards render. Without this the
+  // page loads with NOTHING focused, so the D-pad does nothing and the remote
+  // appears dead (ProfileSelect already does this; ServerSelect never did).
+  // Confirmed on a 2025 QE77S85F: this is what unblocked server selection.
+  useEffect(() => {
+    if (!loading && servers.length > 0) {
+      const timer = setTimeout(() => focusSelf(), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, servers.length, focusSelf]);
 
   if (loading) {
     return (
