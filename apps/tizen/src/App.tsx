@@ -7,7 +7,6 @@ import { loadSettings } from "./services/settings";
 
 // Pages
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { InputDiagnosticOverlay } from "./components/InputDiagnosticOverlay";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { Home } from "./pages/Home";
 import { LibraryPage } from "./pages/Library";
@@ -229,8 +228,6 @@ function App() {
         <AppRoutes />
       </ErrorBoundary>
       <ToastContainer />
-      {/* TEMPORARY: on-screen input diagnostic — remove before merge. */}
-      <InputDiagnosticOverlay />
     </ToastContext.Provider>
   );
 }
