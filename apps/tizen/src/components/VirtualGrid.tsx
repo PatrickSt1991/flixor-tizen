@@ -157,7 +157,10 @@ export function VirtualGrid<T extends VirtualGridItem>({
       }
     };
 
-    el.addEventListener("scroll", onScroll, { passive: true });
+    // Same options object on add and remove: Chrome < 49 reads it as
+    // useCapture=true, so a bare removeEventListener would never match.
+    const scrollOpts = { passive: true } as unknown as boolean;
+    el.addEventListener("scroll", onScroll, scrollOpts);
 
     // ResizeObserver with fallback to window.resize
     let ro: ResizeObserver | null = null;
@@ -169,7 +172,7 @@ export function VirtualGrid<T extends VirtualGridItem>({
     }
 
     return () => {
-      el.removeEventListener("scroll", onScroll);
+      el.removeEventListener("scroll", onScroll, scrollOpts);
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
       if (ro) {

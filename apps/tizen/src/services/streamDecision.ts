@@ -1,6 +1,41 @@
 import type { PlexStream } from '@flixor/core';
 import { loadSettings } from './settings';
 
+/**
+ * fetch() with a timeout that works on every Tizen engine.
+ * AbortSignal.timeout is Chrome 103+ and AbortController Chrome 66+, so on
+ * Tizen TVs `AbortSignal.timeout(...)` threw and the backend path was never
+ * used. Abort when possible, and always race against a timer so the call
+ * cannot hang on engines without AbortController.
+ */
+export function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  ms: number,
+): Promise<Response> {
+  const controller =
+    typeof AbortController !== 'undefined' ? new AbortController() : null;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller?.abort();
+      reject(new Error(`Request timed out after ${ms}ms`));
+    }, ms);
+  });
+  const request = fetch(url, controller ? { ...init, signal: controller.signal } : init);
+  // No Promise#finally (Chrome 63) — clean up on both paths explicitly.
+  return Promise.race([request, timeout]).then(
+    (res) => {
+      clearTimeout(timer);
+      return res;
+    },
+    (err) => {
+      clearTimeout(timer);
+      throw err;
+    },
+  );
+}
+
 // --- Interfaces ---
 
 export interface StreamDecisionInput {
@@ -219,11 +254,10 @@ export async function getBackendStreamUrl(
     const qs = params.toString();
     const url = `${backendUrl}/api/stream/${encodeURIComponent(ratingKey)}${qs ? `?${qs}` : ''}`;
 
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(10_000),
-    });
+    }, 10_000);
 
     if (!res.ok) return null;
 
@@ -251,7 +285,7 @@ export async function updateBackendProgress(
   if (!backendUrl) return false;
 
   try {
-    const res = await fetch(`${backendUrl}/api/timeline`, {
+    const res = await fetchWithTimeout(`${backendUrl}/api/timeline`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -260,8 +294,7 @@ export async function updateBackendProgress(
         durationMs,
         state,
       }),
-      signal: AbortSignal.timeout(5_000),
-    });
+    }, 5_000);
 
     return res.ok;
   } catch {
