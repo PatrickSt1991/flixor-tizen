@@ -111,7 +111,14 @@ export function SettingsPage() {
   // Back key: sub-screen → main, main → previous page
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "XF86Back" || e.key === "Backspace" || e.key === "GoBack") {
+      // keyCode 10009 = Tizen BACK; KeyboardEvent.key is Chrome 51+, so
+      // Tizen 3.0 (Chrome 47) only reports the keyCode.
+      if (
+        e.keyCode === 10009 ||
+        e.key === "XF86Back" ||
+        e.key === "Backspace" ||
+        e.key === "GoBack"
+      ) {
         e.preventDefault();
         if (screen !== "main") {
           setScreen("main");

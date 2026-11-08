@@ -309,10 +309,14 @@ export function PlayerPage() {
   useEffect(() => {
     if (!videoRef.current || !videoUrl) return;
     const video = videoRef.current;
+    // No { once: true }: listener options are Chrome 55+, and Chrome 47
+    // reads the object as useCapture=true, so removeEventListener below
+    // would never match. Detach manually instead.
     const applySpeed = () => {
+      video.removeEventListener("canplay", applySpeed);
       video.playbackRate = playbackSpeed;
     };
-    video.addEventListener("canplay", applySpeed, { once: true });
+    video.addEventListener("canplay", applySpeed);
     return () => video.removeEventListener("canplay", applySpeed);
   }, [videoUrl, playbackSpeed]);
 

@@ -1,3 +1,5 @@
+// Must be first: DOM polyfills for old Tizen WebViews (Chrome 47/56).
+import './polyfills'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'
